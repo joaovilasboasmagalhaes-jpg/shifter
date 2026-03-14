@@ -1,0 +1,17 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+**/__pycache__/
+
+# Pytest cache
+.pytest_cache/
+
+# mypy cache
+.mypy_cache/
+
+# Misc cache folders
+.cache/
+
+# Virtual environment folders (optional)
+venv/
+.venv/
+
