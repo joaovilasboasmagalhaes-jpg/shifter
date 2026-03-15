@@ -1,6 +1,7 @@
 import pytest
 from openpyxl import Workbook
 
+from src.common import read_excel_matrix
 from src.loader.loader_xlsx import _read_axis_values, load_file
 
 
@@ -108,3 +109,64 @@ def test_load_file_raises_for_missing_config_keys(tmp_path):
 
     with pytest.raises(ValueError):
         load_file(str(file_path), {"date": {"row": True, "index": 1, "header": False}})
+
+
+def test_read_excel_matrix_reads_requested_rectangle():
+    workbook = Workbook()
+    sheet = workbook.active
+    if not sheet:
+        raise ValueError(
+            "Failed to create or access the active worksheet in the workbook."
+        )
+
+    sheet["B2"] = "X"
+    sheet["C2"] = "Y"
+    sheet["B3"] = "Z"
+    sheet["C3"] = "W"
+
+    matrix = read_excel_matrix(
+        sheet,
+        start_row=2,
+        start_col=2,
+        row_count=2,
+        col_count=2,
+    )
+
+    assert matrix == [["X", "Y"], ["Z", "W"]]
+
+
+def test_load_file_reads_shift_matrix_from_worker_date_intersection(tmp_path):
+    workbook = Workbook()
+    sheet = workbook.active
+    if not sheet:
+        raise ValueError(
+            "Failed to create or access the active worksheet in the workbook."
+        )
+
+    # Dates on row 1, workers on column 1.
+    sheet["A1"] = "Header"
+    sheet["B1"] = "2026-03-01"
+    sheet["C1"] = "2026-03-02"
+
+    sheet["A2"] = "Alice"
+    sheet["A3"] = "Bob"
+
+    # Shift matrix starts at row date_index+1 (2) and col worker_index+1 (2).
+    sheet["B2"] = "M"
+    sheet["C2"] = "A"
+    sheet["B3"] = "N"
+    sheet["C3"] = "V"
+
+    file_path = tmp_path / "matrix.xlsx"
+    workbook.save(file_path)
+
+    config = {
+        "date": {"row": True, "index": 1, "header": True},
+        "worker": {"row": False, "index": 1, "header": True},
+    }
+
+    result = load_file(str(file_path), config)
+
+    assert result["dates"] == ["2026-03-01", "2026-03-02"]
+    assert result["workers"] == ["Alice", "Bob"]
+    assert result["shifts"] == [["M", "A"], ["N", "V"]]

@@ -1,5 +1,6 @@
 import json
 from contextlib import contextmanager
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Iterator, Optional, Tuple
 
@@ -82,3 +83,56 @@ def open_excel_workbook(
 		yield workbook
 	finally:
 		workbook.close()
+
+
+def read_excel_matrix(
+    sheet: Any,
+    *,
+    start_row: int,
+    start_col: int,
+    row_count: int,
+    col_count: int,
+) -> list[list[Any]]:
+    """Read a rectangular region from a worksheet into a matrix."""
+    if start_row < 1 or start_col < 1:
+        raise ValueError("start_row and start_col must be greater than or equal to 1")
+    if row_count < 0 or col_count < 0:
+        raise ValueError("row_count and col_count must be greater than or equal to 0")
+
+    if row_count == 0 or col_count == 0:
+        return []
+
+    end_col = start_col + col_count - 1
+    matrix: list[list[Any]] = []
+
+    for row_index in range(start_row, start_row + row_count):
+        row_values = next(
+            sheet.iter_rows(
+                min_row=row_index,
+                max_row=row_index,
+                min_col=start_col,
+                max_col=end_col,
+                values_only=True,
+            ),
+            tuple(),
+        )
+        matrix.append(list(row_values))
+
+    return matrix
+
+
+def build_import_date(year: int, month: int, day: int) -> date:
+    """Build a date from imported year/month/day values with validation."""
+    if not isinstance(year, int):
+        raise ValueError("Import config 'year' must be an integer")
+    if not isinstance(month, int):
+        raise ValueError("Import config 'month' must be an integer")
+    if month < 1 or month > 12:
+        raise ValueError("Import config 'month' must be between 1 and 12")
+    if not isinstance(day, int):
+        raise ValueError("Day value must be an integer")
+
+    try:
+        return date(year, month, day)
+    except ValueError as exc:
+        raise ValueError(f"Invalid day '{day}' for {year:04d}-{month:02d}") from exc
