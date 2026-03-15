@@ -1,0 +1,14 @@
+{
+	"import": {
+		"date": {
+			"row": true,
+			"index": 2,
+			"header": true
+		},
+		"worker": {
+			"row": false,
+			"index": 2,
+			"header": true
+		}
+	}
+}

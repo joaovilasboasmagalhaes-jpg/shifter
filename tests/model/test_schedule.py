@@ -10,7 +10,7 @@ from src.model.worker import Worker
 
 def test_add_shift_within_range():
     sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
-    w = Worker(id=1, name="Alice")
+    w = Worker(name="Alice")
     s = Shift(shift_type=ShiftWorkType.NIGHT, date=date(2026, 3, 14), worker=w)
     sched.add_shift(s)
     assert len(sched.shifts) == 1
@@ -19,7 +19,7 @@ def test_add_shift_within_range():
 
 def test_add_shift_out_of_range_raises():
     sched = Schedule(start_date=date(2026, 3, 10), end_date=date(2026, 3, 20))
-    w = Worker(id=2, name="Bob")
+    w = Worker(name="Bob")
     s = Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 9), worker=w)
     with pytest.raises(ValueError):
         sched.add_shift(s)
@@ -27,7 +27,7 @@ def test_add_shift_out_of_range_raises():
 
 def test_schedule_str_and_counts():
     sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
-    w = Worker(id=3, name="Carol")
+    w = Worker(name="Carol")
     s1 = Shift(shift_type=ShiftWorkType.AFTERNOON, date=date(2026, 3, 5), worker=w)
     s2 = Shift(shift_type=ShiftBreakType.VACATION, date=date(2026, 3, 6), worker=w)
     sched.add_shift(s1)
