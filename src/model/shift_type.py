@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 class ShiftType(Enum):
@@ -19,6 +19,23 @@ class ShiftType(Enum):
         """
         raise NotImplementedError()
 
+    def __repr__(self) -> str:  # pragma: no cover - trivial
+        return str(getattr(self, "short_label", self.to_string()))
+
+    @classmethod
+    def from_short_label(
+        cls, short_label: str, config: Optional[dict[str, str]] = None
+    ) -> "ShiftType":
+        """Resolve a shift type by short label across all concrete shift enums."""
+
+        for enum_cls in (ShiftWorkType, ShiftBreakType):
+            try:
+                return enum_cls.from_short_label(short_label, config)
+            except ValueError:
+                continue
+
+        raise ValueError(f"Unknown shift short label: {short_label}")
+
 
 class ShiftWorkType(ShiftType):
     """Work shift types with an associated hour range.
@@ -29,18 +46,42 @@ class ShiftWorkType(ShiftType):
         AFTERNOON: 16:00-24:00
     """
 
-    NIGHT = (0, "Night", (0, 8))
-    MORNING = (1, "Morning", (8, 16))
-    AFTERNOON = (2, "Afternoon", (16, 24))
+    NIGHT = (0, "Night", "N", (0, 8), "night")
+    MORNING = (1, "Morning", "M", (8, 16), "morning")
+    AFTERNOON = (2, "Afternoon", "A", (16, 24), "afternoon")
 
-    def __init__(self, code: int, label: str, hours: Tuple[int, int]):
+    def __init__(
+        self,
+        code: int,
+        label: str,
+        og_short_label: str,
+        hours: Tuple[int, int],
+        config_label: str,
+    ):
         self.code = code
         self.label = label
+        self.og_short_label = og_short_label
+        self.short_label = og_short_label
         self.hours = hours
+        self.config_label = config_label
 
     def to_string(self) -> str:
         """Return a human-readable label for the shift."""
         return self.label
+
+    @classmethod
+    def from_short_label(
+        cls, short_label: str, config: Optional[dict[str, str]] = None
+    ) -> "ShiftWorkType":
+        """Resolve a work shift by short label."""
+        config = config or {}
+        for shift_type in cls:
+            shift_type.short_label = config.get(
+                shift_type.config_label, shift_type.og_short_label
+            )
+            if shift_type.short_label == short_label:
+                return shift_type
+        raise ValueError(f"Unknown work shift short label: {short_label}")
 
     def hours_range(self) -> Tuple[int, int]:
         """Return the (start_hour, end_hour) tuple in 24-hour integers."""
@@ -53,15 +94,32 @@ class ShiftWorkType(ShiftType):
 class ShiftBreakType(ShiftType):
     """Non-working shift types (breaks/time off)."""
 
-    DAY_OFF = (10, "DayOff")
-    VACATION = (11, "Vacation")
+    DAY_OFF = (10, "DayOff", "DO", "day_off")
+    VACATION = (11, "Vacation", "V", "vacation")
 
-    def __init__(self, code: int, label: str):
+    def __init__(self, code: int, label: str, og_short_label: str, config_label: str):
         self.code = code
         self.label = label
+        self.og_short_label = og_short_label
+        self.short_label = og_short_label
+        self.config_label = config_label
 
     def to_string(self) -> str:
         return self.label
+
+    @classmethod
+    def from_short_label(
+        cls, short_label: str, config: Optional[dict[str, str]] = None
+    ) -> "ShiftBreakType":
+        """Resolve a break shift by short label."""
+        config = config or {}
+        for shift_type in cls:
+            shift_type.short_label = config.get(
+                shift_type.config_label, shift_type.og_short_label
+            )
+            if shift_type.short_label == short_label:
+                return shift_type
+        raise ValueError(f"Unknown break shift short label: {short_label}")
 
     def __str__(self) -> str:  # pragma: no cover - trivial
         return self.to_string()
