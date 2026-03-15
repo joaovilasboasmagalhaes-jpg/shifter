@@ -1,7 +1,9 @@
 import argparse
 
-from loader.loader import load_file
-
+try:
+    from loader.loader import load_file
+except ModuleNotFoundError:
+    from src.loader.loader import load_file
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Import shifts from a file")
