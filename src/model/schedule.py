@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Dict, List
+from typing import cast
 
 from src.model.shift import Shift
 
@@ -17,7 +17,9 @@ class Schedule:
 
     start_date: date
     end_date: date
-    shifts_by_worker: Dict[int, List[Shift]] = field(default_factory=dict)
+    shifts_by_worker: dict[int, list[Shift]] = field(
+        default_factory=lambda: cast(dict[int, list[Shift]], {})
+    )
 
     def add_shift(self, shift: Shift) -> None:
         """Add a shift if its date is within the schedule range.
@@ -28,7 +30,7 @@ class Schedule:
             raise ValueError("Shift date out of schedule range")
         self.shifts_by_worker.setdefault(shift.worker.id, []).append(shift)
 
-    def shifts_on(self, d: date) -> List[Shift]:
+    def shifts_on(self, d: date) -> list[Shift]:
         """Return all shifts scheduled on date `d`."""
         if not self.is_date_within_range(d):
             raise ValueError("Date is out of schedule range")
@@ -39,10 +41,10 @@ class Schedule:
             if shift.date == d
         ]
 
-    def shifts_for_worker(self, worker_id: int) -> List[Shift]:
+    def shifts_for_worker(self, worker_id: int) -> list[Shift]:
         """Return all shifts assigned to a worker id."""
         return list(self.shifts_by_worker.get(worker_id, []))
-    
+
     def is_date_within_range(self, d: date) -> bool:
         """Check if a date is within the schedule's start and end dates."""
         return self.start_date <= d <= self.end_date
