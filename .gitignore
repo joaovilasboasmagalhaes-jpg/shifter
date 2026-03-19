@@ -17,3 +17,6 @@ venv/
 
 # Temporary files
 ~*
+
+# Visual Studio Code settings
+.vscode/
