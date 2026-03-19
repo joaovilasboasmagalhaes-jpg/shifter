@@ -97,7 +97,9 @@ def _build_shedule(
     dates: list[Date], workers: list[Worker], shift_types: list[list[ShiftType]]
 ) -> Schedule:
     """Build a list of Shifts from the given dates, workers, and shift type matrix."""
-    schedule: Schedule = Schedule(start_date=dates[0], end_date=dates[-1], shifts=[])
+    schedule: Schedule = Schedule(
+        start_date=dates[0], end_date=dates[-1], shifts_by_worker={}
+    )
     for row_index, (worker, shift_type_row) in enumerate(zip(workers, shift_types)):
         for col_index, (d, shift_type) in enumerate(zip(dates, shift_type_row)):
             schedule.add_shift(Shift(date=d, worker=worker, shift_type=shift_type))
@@ -129,4 +131,3 @@ def load_file(args: argparse.Namespace) -> None:
     workers = [Worker(name=str(w)) for w in raw_workers]
     schedule = _build_shedule(dates, workers, shift_types)
 
-    _ = (dates, workers, raw_shifts)
