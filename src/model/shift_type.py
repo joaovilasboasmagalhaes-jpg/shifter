@@ -1,5 +1,10 @@
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Tuple
+
+try:
+    from model.config import Config
+except ModuleNotFoundError:
+    from src.model.config import Config
 
 
 class ShiftType(Enum):
@@ -11,30 +16,52 @@ class ShiftType(Enum):
     """
 
     def to_string(self) -> str:
-        """Return a human-readable label for the shift type.
-
-        Sub-classes (enum members defined on subclasses) should override
-        this. We raise NotImplementedError here to make the contract clear
-        to static type checkers.
-        """
-        raise NotImplementedError()
-
-    def __repr__(self) -> str:  # pragma: no cover - trivial
-        return str(getattr(self, "short_label", self.to_string()))
+        """Return the human-readable label for this shift type."""
+        return str(getattr(self, "label", self.name))
 
     @classmethod
-    def from_short_label(
-        cls, short_label: str, config: Optional[dict[str, str]] = None
-    ) -> "ShiftType":
-        """Resolve a shift type by short label across all concrete shift enums."""
+    def _configured_short_labels(cls) -> dict[str, str]:
+        """Return shift-type short-label overrides from the runtime Config singleton."""
+        try:
+            return Config.get_instance().shift_type_labels
+        except RuntimeError:
+            return {}
 
-        for enum_cls in (ShiftWorkType, ShiftBreakType):
-            try:
-                return enum_cls.from_short_label(short_label, config)
-            except ValueError:
-                continue
+    def _effective_short_label(self) -> str:
+        """Return the configured short label, falling back to the member default."""
+        config = self._configured_short_labels()
+        return config.get(
+            getattr(self, "config_label", ""), getattr(self, "short_label", self.name)
+        )
 
-        raise ValueError(f"Unknown shift short label: {short_label}")
+    def __repr__(self) -> str:  # pragma: no cover - trivial
+        return self._effective_short_label()
+
+    def __str__(self) -> str:  # pragma: no cover - trivial
+        return self.to_string()
+
+    @classmethod
+    def from_short_label(cls, short_label: str) -> "ShiftType":
+        """Resolve a shift type by short label.
+
+        - Called on ShiftType: searches all concrete shift enums.
+        - Called on a concrete enum class: searches only that enum.
+        """
+        if cls is ShiftType:
+            for enum_cls in (ShiftWorkType, ShiftBreakType):
+                try:
+                    return enum_cls.from_short_label(short_label)
+                except ValueError:
+                    continue
+            raise ValueError(f"Unknown shift short label: {short_label}")
+
+        for member in cls:
+            configured_label = member._effective_short_label()
+            default_label = getattr(member, "short_label", member.name)
+            if short_label == configured_label or short_label == default_label:
+                return member
+
+        raise ValueError(f"Unknown {cls.__name__} short label: {short_label}")
 
 
 class ShiftWorkType(ShiftType):
@@ -54,41 +81,19 @@ class ShiftWorkType(ShiftType):
         self,
         code: int,
         label: str,
-        og_short_label: str,
+        short_label: str,
         hours: Tuple[int, int],
         config_label: str,
     ):
         self.code = code
         self.label = label
-        self.og_short_label = og_short_label
-        self.short_label = og_short_label
+        self.short_label = short_label
         self.hours = hours
         self.config_label = config_label
-
-    def to_string(self) -> str:
-        """Return a human-readable label for the shift."""
-        return self.label
-
-    @classmethod
-    def from_short_label(
-        cls, short_label: str, config: Optional[dict[str, str]] = None
-    ) -> "ShiftWorkType":
-        """Resolve a work shift by short label."""
-        config = config or {}
-        for shift_type in cls:
-            shift_type.short_label = config.get(
-                shift_type.config_label, shift_type.og_short_label
-            )
-            if shift_type.short_label == short_label:
-                return shift_type
-        raise ValueError(f"Unknown work shift short label: {short_label}")
 
     def hours_range(self) -> Tuple[int, int]:
         """Return the (start_hour, end_hour) tuple in 24-hour integers."""
         return self.hours
-
-    def __str__(self) -> str:  # pragma: no cover - trivial
-        return self.to_string()
 
 
 class ShiftBreakType(ShiftType):
@@ -97,29 +102,9 @@ class ShiftBreakType(ShiftType):
     DAY_OFF = (10, "DayOff", "DO", "day_off")
     VACATION = (11, "Vacation", "V", "vacation")
 
-    def __init__(self, code: int, label: str, og_short_label: str, config_label: str):
+    def __init__(self, code: int, label: str, short_label: str, config_label: str):
         self.code = code
         self.label = label
-        self.og_short_label = og_short_label
-        self.short_label = og_short_label
+        self.short_label = short_label
         self.config_label = config_label
 
-    def to_string(self) -> str:
-        return self.label
-
-    @classmethod
-    def from_short_label(
-        cls, short_label: str, config: Optional[dict[str, str]] = None
-    ) -> "ShiftBreakType":
-        """Resolve a break shift by short label."""
-        config = config or {}
-        for shift_type in cls:
-            shift_type.short_label = config.get(
-                shift_type.config_label, shift_type.og_short_label
-            )
-            if shift_type.short_label == short_label:
-                return shift_type
-        raise ValueError(f"Unknown break shift short label: {short_label}")
-
-    def __str__(self) -> str:  # pragma: no cover - trivial
-        return self.to_string()
