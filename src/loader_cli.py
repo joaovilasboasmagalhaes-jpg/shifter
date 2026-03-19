@@ -1,6 +1,11 @@
 import argparse
 
 try:
+    from model.config import Config
+except ModuleNotFoundError:
+    from src.model.config import Config
+
+try:
     from loader.loader import load_file
 except ModuleNotFoundError:
     from src.loader.loader import load_file
@@ -21,6 +26,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     # Parse CLI arguments and pass them to the loader entrypoint.
     args = parse_args()
+    Config.load_from_file(args.config_path, required_root_keys=("import",))
     load_file(args)
 
 
