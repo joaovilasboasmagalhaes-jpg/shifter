@@ -19,4 +19,4 @@ venv/
 ~*
 
 # Visual Studio Code settings
-.vscode/
+.vscode
