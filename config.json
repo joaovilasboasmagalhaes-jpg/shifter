@@ -1,0 +1,23 @@
+{
+	"import": {
+		"date": {
+			"row": true,
+			"index": 2,
+			"header": true
+		},
+		"worker": {
+			"row": false,
+			"index": 2,
+			"header": true
+		},
+		"year": 2026,
+		"month": 2,
+		"shift_types": {
+			"morning": "M",
+			"afternoon": "T",
+			"night": "N",
+			"vacation": "FE",
+			"day_off": "F"
+		}
+	}
+}

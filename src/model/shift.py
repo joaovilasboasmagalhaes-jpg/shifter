@@ -26,3 +26,6 @@ class Shift:
 
     def __str__(self) -> str:
         return self.to_string()
+
+    def __repr__(self) -> str:  # pragma: no cover - trivial
+        return f"Shift('{self.shift_type.get_short_label()}', {self.worker.name}, '{self.date.isoformat()}')"
