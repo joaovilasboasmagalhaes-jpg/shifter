@@ -69,10 +69,10 @@ def test_from_short_label_does_not_mutate_enum_labels():
     )
 
     assert ShiftType.from_short_label("X") == ShiftWorkType.NIGHT
+    assert repr(ShiftWorkType.NIGHT) == "X"
 
     # Config-based lookup must not permanently change the member short label.
     assert ShiftWorkType.NIGHT.short_label == "N"
-    assert repr(ShiftWorkType.NIGHT) == "X"
 
     # After config reset, representation should fall back to enum default short label.
     Config.reset()
