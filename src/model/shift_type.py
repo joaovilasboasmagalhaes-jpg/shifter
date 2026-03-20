@@ -15,6 +15,10 @@ class ShiftType(Enum):
     interface expected by consumers (e.g. `to_string`).
     """
 
+    def get_short_label(self) -> str:
+        """Return the default short label for this shift type."""
+        return self._effective_short_label()
+
     def to_string(self) -> str:
         """Return the human-readable label for this shift type."""
         return str(getattr(self, "label", self.name))
