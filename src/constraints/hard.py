@@ -5,7 +5,6 @@ try:
     from constraints.violation import collector, constraint
     from model.schedule import Schedule
     from model.shift import Shift
-    from model.shift_type import ShiftWorkType
     from utils.date_utils import dates_in_month, next_day
 except ModuleNotFoundError:
     from src.constraints.violation import ConstraintSeverity as Severity
