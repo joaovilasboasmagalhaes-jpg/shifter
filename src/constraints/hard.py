@@ -23,9 +23,10 @@ def five_consecutive_shifts(schedule: Schedule) -> bool:
 
     def break_constraint(worker_id: int, shifts: list[Shift]) -> None:
         nonlocal constraint_broken
+        worker = schedule.get_worker(worker_id)
         collector.add_current(
             severity=Severity.ERROR,
-            message=f"Worker {worker_id} has more than 5 consecutive shifts.",
+            message=f"Worker {worker.name} has more than 5 consecutive shifts.",
             worker_id=worker_id,
             details={"consecutive_shifts": [s.__repr__() for s in shifts]},
         )
