@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import cast
 
-from model.worker import Worker
 from src.model.shift import Shift
+from src.model.worker import Worker
 
 
 @dataclass
