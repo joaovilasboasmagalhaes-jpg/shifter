@@ -15,6 +15,20 @@ class ShiftType(Enum):
     interface expected by consumers (e.g. `to_string`).
     """
 
+    def __init__(
+        self,
+        code: int,
+        label: str,
+        short_label: str,
+        hours: Tuple[int, int] | None,
+        config_label: str,
+    ):
+        self.code = code
+        self.label = label
+        self.short_label = short_label
+        self.hours = hours
+        self.config_label = config_label
+
     def is_work_shift(self) -> bool:
         """Return True if this shift type is a work shift, False if it's a break."""
         return isinstance(self, ShiftWorkType)
@@ -22,6 +36,16 @@ class ShiftType(Enum):
     def get_short_label(self) -> str:
         """Return the default short label for this shift type."""
         return self._effective_short_label()
+
+    def hours_range(self) -> Tuple[int, int]:
+        """Return the (start_hour, end_hour) tuple in 24-hour integers.
+
+        Raises:
+            ValueError: If this shift type does not have defined hours.
+        """
+        if self.hours is None:
+            raise ValueError(f"ShiftType {self.name} does not have defined hours")
+        return self.hours
 
     def to_string(self) -> str:
         """Return the human-readable label for this shift type."""
@@ -85,34 +109,9 @@ class ShiftWorkType(ShiftType):
     MORNING = (1, "Morning", "M", (8, 16), "morning")
     AFTERNOON = (2, "Afternoon", "A", (16, 24), "afternoon")
 
-    def __init__(
-        self,
-        code: int,
-        label: str,
-        short_label: str,
-        hours: Tuple[int, int],
-        config_label: str,
-    ):
-        self.code = code
-        self.label = label
-        self.short_label = short_label
-        self.hours = hours
-        self.config_label = config_label
-
-    def hours_range(self) -> Tuple[int, int]:
-        """Return the (start_hour, end_hour) tuple in 24-hour integers."""
-        return self.hours
-
-
 class ShiftBreakType(ShiftType):
     """Non-working shift types (breaks/time off)."""
 
-    DAY_OFF = (10, "DayOff", "DO", "day_off")
-    VACATION = (11, "Vacation", "V", "vacation")
-
-    def __init__(self, code: int, label: str, short_label: str, config_label: str):
-        self.code = code
-        self.label = label
-        self.short_label = short_label
-        self.config_label = config_label
+    DAY_OFF = (10, "DayOff", "DO", None, "day_off")
+    VACATION = (11, "Vacation", "V", None, "vacation")
 
