@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import cast
 
+from model.worker import Worker
 from src.model.shift import Shift
 
 
@@ -40,6 +41,13 @@ class Schedule:
             for shift in worker_shifts
             if shift.date == d
         ]
+
+    def get_worker(self, worker_id: int) -> Worker:
+        """Return the Worker object for a given worker id."""
+        worker_shifts = self.shifts_by_worker.get(worker_id)
+        if not worker_shifts:
+            raise ValueError(f"No shifts found for worker id {worker_id}")
+        return worker_shifts[0].worker
 
     def shifts_for_worker(self, worker_id: int) -> list[Shift]:
         """Return all shifts assigned to a worker id."""

@@ -12,7 +12,6 @@ except ModuleNotFoundError:
     from src.constraints.violation import collector, constraint
     from src.model.schedule import Schedule
     from src.model.shift import Shift
-    from src.model.shift_type import ShiftWorkType
     from src.utils.date_utils import dates_in_month, next_day
 
 
@@ -53,18 +52,91 @@ def monthly_weekend(schedule: Schedule) -> bool:
     """Ensure that each worker has at least one full weekend off per month."""
     constraint_broken = False
 
+    class WorkingWeekend:
+        days: tuple[date, date]
+        status: str = "unknown"  # "working", "off", "half-off" or "unknown"
+
+        def __init__(self, days: tuple[date, date]):
+            self.days = days
+
+        def register_shift(self, shift: Shift) -> None:
+            if self.unknown():
+                if shift.is_work_shift():
+                    self.status = "working"
+                else:
+                    self.status = "half-off"
+            elif self._half_off() and not shift.is_work_shift():
+                self.status = "off"
+            else:
+                self.status = "working"
+
+        def unknown(self) -> bool:
+            return self.status == "unknown"
+
+        def working(self) -> bool:
+            return self.status == "working"
+
+        def _half_off(self) -> bool:
+            return self.status == "half-off"
+
+    class WorkingWeekendMonth:
+        weekends: list[WorkingWeekend] = []
+        map_weekend: dict[date, int] = {}  # Map from date to index of weekend
+        month_days: list[date]
+
+        def __init__(self, year: int, month: int):
+            self.month_days = dates_in_month(year, month)
+            # Exclude the last day to avoid broken weekend
+            for day in self.month_days[:-1]:
+                if day.weekday() == 5:  # Saturday
+                    sunday = next_day(day)
+                    self.weekends.append(WorkingWeekend(days=(day, sunday)))
+                    index = len(self.weekends) - 1
+                    self.map_weekend[day] = index
+                    self.map_weekend[sunday] = index
+
+        def register_shift(self, shift: Shift) -> None:
+            weekend = self._get_weekend(shift.date)
+            weekend.register_shift(shift)
+
+        def _get_weekend(self, date: date) -> WorkingWeekend:
+            self._validate_weekend_date(date)
+            weekend_index = self.map_weekend[date]
+            return self.weekends[weekend_index]
+
+        def _validate_weekend_date(self, date: date) -> None:
+            if date not in self.map_weekend:
+                raise ValueError(f"Date {date} is not a weekend day in this month.")
+
     def break_constraint(worker_id: int, month_key: tuple[int, int]) -> None:
         nonlocal constraint_broken
+        worker = schedule.get_worker(worker_id)
         collector.add_current(
             severity=Severity.ERROR,
             message=(
-                f"Worker {worker_id} has no full weekend off in "
+                f"Worker {worker.name} has no full weekend off in "
                 f"{month_key[0]}-{month_key[1]:02d}."
             ),
             worker_id=worker_id,
             details={"month": f"{month_key[0]}-{month_key[1]:02d}"},
         )
         constraint_broken = True
+
+    def issue_warning(worker_id: int, ww: WorkingWeekend) -> None:
+        worker = schedule.get_worker(worker_id)
+        collector.add_current(
+            severity=Severity.WARNING,
+            message=(
+                f"Missing weekend shift data for worker {worker.name} in "
+                f"{ww.days[0].isoformat()} - {ww.days[1].isoformat()}. "
+                "Working weekend constraint not applied for this month for this worker."
+            ),
+            worker_id=worker_id,
+            details={
+                "missing_weekend": [d.isoformat() for d in ww.days],
+                "worker_id": worker_id,
+            },
+        )
 
     for worker_id, shifts in schedule.shifts_by_worker.items():
         # Group shifts by month
@@ -73,26 +145,20 @@ def monthly_weekend(schedule: Schedule) -> bool:
             month_key = (shift.date.year, shift.date.month)
             shifts_by_month.setdefault(month_key, []).append(shift)
 
-        for month_key, month_shifts in shifts_by_month.items():
-            month_days = dates_in_month(month_key[0], month_key[1])
-            weekends: list[tuple[date, date]] = []
-            for day in month_days:
-                if day.weekday() == 5:  # Saturday
-                    sunday = date(day.year, day.month, day.day + 1)
-                    weekends.append((day, sunday))
+        for (year, month), month_shifts in shifts_by_month.items():
+            wwk_month = WorkingWeekendMonth(year, month)
 
-            worked_dates = {
-                shift.date
-                for shift in month_shifts
-                if isinstance(shift.shift_type, ShiftWorkType)
-            }
+            for shift in month_shifts:
+                if shift.date in wwk_month.map_weekend:
+                    wwk_month.register_shift(shift)
 
-            worked_every_weekend = all(
-                (saturday in worked_dates) or (sunday in worked_dates)
-                for saturday, sunday in weekends
-            )
+            # Working every weekend
+            if all(ww.working() for ww in wwk_month.weekends):
+                break_constraint(worker_id, (year, month))
 
-            if weekends and worked_every_weekend:
-                break_constraint(worker_id, month_key)
+            # Weekend missing
+            for ww in wwk_month.weekends:
+                if ww.unknown():
+                    issue_warning(worker_id, ww)
 
     return constraint_broken

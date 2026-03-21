@@ -2,12 +2,20 @@ from datetime import date, timedelta
 
 import pytest
 
-from src.constraints.hard import five_consecutive_shifts, monthly_weekend
-from src.constraints.violation import ConstraintSeverity, collector
-from src.model.schedule import Schedule
-from src.model.shift import Shift
-from src.model.shift_type import ShiftBreakType, ShiftWorkType
-from src.model.worker import Worker
+try:
+    from constraints.hard import five_consecutive_shifts, monthly_weekend
+    from constraints.violation import ConstraintSeverity, collector
+    from model.schedule import Schedule
+    from model.shift import Shift
+    from model.shift_type import ShiftBreakType, ShiftWorkType
+    from model.worker import Worker
+except ModuleNotFoundError:
+    from src.constraints.hard import five_consecutive_shifts, monthly_weekend
+    from src.constraints.violation import ConstraintSeverity, collector
+    from src.model.schedule import Schedule
+    from src.model.shift import Shift
+    from src.model.shift_type import ShiftBreakType, ShiftWorkType
+    from src.model.worker import Worker
 
 
 @pytest.fixture(autouse=True)
@@ -125,7 +133,11 @@ def test_monthly_weekend_does_not_break_when_worker_has_one_full_weekend_off():
         sched.add_shift(Shift(shift_type=ShiftWorkType.MORNING, date=d, worker=worker))
 
     assert monthly_weekend(sched) is False
-    assert collector.violations == []
+    warnings = [
+        v for v in collector.violations if v.severity == ConstraintSeverity.WARNING
+    ]
+    assert len(warnings) == 1
+    assert warnings[0].worker_id == worker.id
 
 
 def test_monthly_weekend_does_not_break_for_partial_month_schedule():
@@ -138,7 +150,11 @@ def test_monthly_weekend_does_not_break_for_partial_month_schedule():
         sched.add_shift(Shift(shift_type=ShiftWorkType.MORNING, date=d, worker=worker))
 
     assert monthly_weekend(sched) is False
-    assert collector.violations == []
+    warnings = [
+        v for v in collector.violations if v.severity == ConstraintSeverity.WARNING
+    ]
+    assert len(warnings) == 2
+    assert all(v.worker_id == worker.id for v in warnings)
 
 
 def test_monthly_weekend_counts_only_work_shifts_for_weekend_coverage():
@@ -160,3 +176,73 @@ def test_monthly_weekend_counts_only_work_shifts_for_weekend_coverage():
 
     assert monthly_weekend(sched) is False
     assert collector.violations == []
+
+
+def test_monthly_weekend_warns_when_weekend_data_is_missing():
+    worker = Worker(name="Lia")
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+    # Only one weekend has data; remaining weekends should trigger warnings.
+    sched.add_shift(
+        Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 7), worker=worker)
+    )
+
+    assert monthly_weekend(sched) is False
+
+    warnings = [
+        v for v in collector.violations if v.severity == ConstraintSeverity.WARNING
+    ]
+    assert len(warnings) == 3
+    assert all(v.worker_id == worker.id for v in warnings)
+
+
+def test_monthly_weekend_treats_two_break_days_as_full_weekend_off():
+    worker = Worker(name="Mona")
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+    # Works every weekend except the last one, where both weekend days are breaks.
+    for d in [date(2026, 3, 7), date(2026, 3, 14), date(2026, 3, 21)]:
+        sched.add_shift(Shift(shift_type=ShiftWorkType.MORNING, date=d, worker=worker))
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 28), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 29), worker=worker)
+    )
+
+    assert monthly_weekend(sched) is False
+    assert collector.violations == []
+
+
+def test_monthly_weekend_marks_mixed_work_and_break_weekend_as_working():
+    worker = Worker(name="Nora")
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+    # Each weekend has at least one work shift, even if the other day is a break.
+    sched.add_shift(
+        Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 7), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 8), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 14), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 15), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 21), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 22), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 28), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 29), worker=worker)
+    )
+
+    assert monthly_weekend(sched) is True
+    assert len(collector.violations) == 1
+    violation = collector.violations[0]
+    assert violation.severity == ConstraintSeverity.ERROR
+    assert violation.worker_id == worker.id

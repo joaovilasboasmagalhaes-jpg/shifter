@@ -15,6 +15,10 @@ class ShiftType(Enum):
     interface expected by consumers (e.g. `to_string`).
     """
 
+    def is_work_shift(self) -> bool:
+        """Return True if this shift type is a work shift, False if it's a break."""
+        return isinstance(self, ShiftWorkType)
+
     def get_short_label(self) -> str:
         """Return the default short label for this shift type."""
         return self._effective_short_label()
