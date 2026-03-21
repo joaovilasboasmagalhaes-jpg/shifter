@@ -1,6 +1,5 @@
 import json
 from contextlib import contextmanager
-from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Iterator, Optional, Tuple
 
@@ -121,20 +120,3 @@ def read_excel_matrix(
         matrix.append(list(row_values))
 
     return matrix
-
-
-def build_import_date(year: int, month: int, day: int) -> date:
-    """Build a date from imported year/month/day values with validation."""
-    if not isinstance(year, int):
-        raise ValueError("Import config 'year' must be an integer")
-    if not isinstance(month, int):
-        raise ValueError("Import config 'month' must be an integer")
-    if month < 1 or month > 12:
-        raise ValueError("Import config 'month' must be between 1 and 12")
-    if not isinstance(day, int):
-        raise ValueError("Day value must be an integer")
-
-    try:
-        return date(year, month, day)
-    except ValueError as exc:
-        raise ValueError(f"Invalid day '{day}' for {year:04d}-{month:02d}") from exc

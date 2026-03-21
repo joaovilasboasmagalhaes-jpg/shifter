@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Tuple, cast
 
 try:
-    from common import load_json_config
+    from utils.loading import load_json_config
 except ModuleNotFoundError:
-    from src.common import load_json_config
+    from src.utils.loading import load_json_config
 
 
 @dataclass(frozen=True)

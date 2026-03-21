@@ -1,4 +1,3 @@
-from calendar import monthrange
 from datetime import date
 
 try:
@@ -7,12 +6,14 @@ try:
     from model.schedule import Schedule
     from model.shift import Shift
     from model.shift_type import ShiftWorkType
+    from utils.date_utils import dates_in_month, next_day
 except ModuleNotFoundError:
     from src.constraints.violation import ConstraintSeverity as Severity
     from src.constraints.violation import collector, constraint
     from src.model.schedule import Schedule
     from src.model.shift import Shift
     from src.model.shift_type import ShiftWorkType
+    from src.utils.date_utils import dates_in_month, next_day
 
 
 @constraint("Five Consecutive Shifts")
@@ -64,10 +65,6 @@ def monthly_weekend(schedule: Schedule) -> bool:
             details={"month": f"{month_key[0]}-{month_key[1]:02d}"},
         )
         constraint_broken = True
-
-    def dates_in_month(year: int, month: int) -> list[date]:
-        days_in_month = monthrange(year, month)[1]
-        return [date(year, month, day) for day in range(1, days_in_month + 1)]
 
     for worker_id, shifts in schedule.shifts_by_worker.items():
         # Group shifts by month
