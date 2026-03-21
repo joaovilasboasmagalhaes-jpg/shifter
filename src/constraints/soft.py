@@ -69,3 +69,9 @@ def shift_continuation(schedule: Schedule) -> float:
 
     shift_continuation_score = sum(worker_scores.values())
     return shift_continuation_score
+
+
+def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
+    """Score the schedule based on how well it matches the preferred schedule."""
+
+    return 0.0
