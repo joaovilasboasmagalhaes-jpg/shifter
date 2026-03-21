@@ -1,7 +1,11 @@
 import pytest
 
-from src.model.config import Config
-from src.model.shift_type import ShiftBreakType, ShiftType, ShiftWorkType
+try:
+    from model.config import Config
+    from model.shift_type import ShiftBreakType, ShiftType, ShiftWorkType
+except ModuleNotFoundError:
+    from src.model.config import Config
+    from src.model.shift_type import ShiftBreakType, ShiftType, ShiftWorkType
 
 
 def test_work_shift_labels_and_hours():
