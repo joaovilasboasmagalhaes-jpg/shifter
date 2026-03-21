@@ -1,8 +1,12 @@
 from dataclasses import dataclass
 from datetime import date
 
-from src.model.shift_type import ShiftType
-from src.model.worker import Worker
+try:
+    from model.shift_type import ShiftType
+    from model.worker import Worker
+except ModuleNotFoundError:
+    from src.model.shift_type import ShiftType
+    from src.model.worker import Worker
 
 
 @dataclass
@@ -18,6 +22,10 @@ class Shift:
     shift_type: ShiftType
     date: date
     worker: Worker
+
+    def consecutive_shifts(self, other: "Shift") -> bool:
+        """Return True if this shift and the other shift are on consecutive days."""
+        return abs((self.date - other.date).days) == 1
 
     def is_work_shift(self) -> bool:
         """Return True if this shift is a work shift, False if it's a break."""

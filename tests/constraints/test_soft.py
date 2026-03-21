@@ -1,13 +1,13 @@
 from datetime import date
 
 try:
-    from constraints.soft import balanced_schedule
+    from constraints.soft import balanced_schedule, shift_continuation
     from model.schedule import Schedule
     from model.shift import Shift
     from model.shift_type import ShiftWorkType
     from model.worker import Worker
 except ModuleNotFoundError:
-    from src.constraints.soft import balanced_schedule
+    from src.constraints.soft import balanced_schedule, shift_continuation
     from src.model.schedule import Schedule
     from src.model.shift import Shift
     from src.model.shift_type import ShiftWorkType
@@ -65,4 +65,70 @@ def test_balanced_schedule_no_shifts():
     sched = Schedule(start_date=date(2024, 1, 1), end_date=date(2024, 1, 3))
     # No shifts assigned
     result = balanced_schedule(sched)
+    assert abs(result) < 1e-6
+
+
+# --- shift_continuation tests ---
+def test_shift_continuation_no_changes():
+    Worker.reset_ids()
+    w = Worker("A")
+    sched = Schedule(start_date=date(2024, 1, 1), end_date=date(2024, 1, 3))
+    # All shifts are the same type, consecutive days
+    sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 1), w))
+    sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 2), w))
+    sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 3), w))
+    result = shift_continuation(sched)
+    assert abs(result) < 1e-6
+
+
+def test_shift_continuation_with_changes():
+    Worker.reset_ids()
+    w = Worker("B")
+    sched = Schedule(start_date=date(2024, 1, 1), end_date=date(2024, 1, 4))
+    # Morning -> Afternoon -> Night (all changes, last is night)
+    sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 1), w))
+    sched.add_shift(Shift(ShiftWorkType.AFTERNOON, date(2024, 1, 2), w))
+    sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 3), w))
+    # Penalties: M->A (1.0), A->N (night, 1.0)
+    result = shift_continuation(sched)
+    assert abs(result - 2.0) < 1e-6
+
+
+def test_shift_continuation_night_involved():
+    Worker.reset_ids()
+    w = Worker("C")
+    sched = Schedule(start_date=date(2024, 1, 1), end_date=date(2024, 1, 4))
+    # Night -> Morning -> Night
+    sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 1), w))
+    sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 2), w))
+    sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 3), w))
+    # Penalties: N->M (night, 1.0), M->N (night, 1.0)
+    result = shift_continuation(sched)
+    assert abs(result - 2.0) < 1e-6
+
+
+def test_shift_continuation_multiple_workers():
+    Worker.reset_ids()
+    w1 = Worker("A")
+    w2 = Worker("B")
+    sched = Schedule(start_date=date(2024, 1, 1), end_date=date(2024, 1, 4))
+    # w1: M->A->N (2 changes)
+    sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 1), w1))
+    sched.add_shift(Shift(ShiftWorkType.AFTERNOON, date(2024, 1, 2), w1))
+    sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 3), w1))
+    # w2: N->N->A (1 change, N->A)
+    sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 1), w2))
+    sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 2), w2))
+    sched.add_shift(Shift(ShiftWorkType.AFTERNOON, date(2024, 1, 3), w2))
+    result = shift_continuation(sched)
+    # w1: M->A (1.0), A->N (night, 1.0) = 2.0; w2: N->N (0), N->A (night, 1.0) = 1.0; total = 3.0
+    assert abs(result - 3.0) < 1e-6
+
+
+def test_shift_continuation_single_worker_no_shifts():
+    Worker.reset_ids()
+    w = Worker("Solo")
+    sched = Schedule(start_date=date(2024, 1, 1), end_date=date(2024, 1, 3))
+    # No shifts assigned
+    result = shift_continuation(sched)
     assert abs(result) < 1e-6
