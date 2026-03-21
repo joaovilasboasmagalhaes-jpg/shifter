@@ -163,3 +163,48 @@ def monthly_weekend(schedule: Schedule) -> bool:
                     issue_warning(worker_id, ww)
 
     return constraint_broken
+
+
+@constraint("Rest Gap")
+def rest_gap(schedule: Schedule) -> bool:
+    """Ensure that there is at least 11 hours of rest between shifts for each worker.
+    Returns True if any worker has less than 11 hours between shifts, else False."""
+    constraint_broken = False
+
+    def break_constraint(
+        worker_id: int, prev_shift: Shift, curr_shift: Shift, hours_between: int
+    ) -> None:
+        nonlocal constraint_broken
+        worker = schedule.get_worker(worker_id)
+        collector.add_current(
+            severity=Severity.ERROR,
+            message=(
+                f"Worker {worker.name} has only {hours_between} hours of rest between "
+                f"{prev_shift.to_string()} and {curr_shift.to_string()}."
+            ),
+            worker_id=worker_id,
+            details={
+                "previous_shift": prev_shift.__repr__(),
+                "current_shift": curr_shift.__repr__(),
+                "hours_between": hours_between,
+            },
+        )
+        constraint_broken = True
+
+    REST_GAP = 11
+    for worker_id, shifts in schedule.shifts_by_worker.items():
+        # Sort shifts by date to check for rest gaps
+        sorted_shifts = sorted(shifts, key=lambda s: s.date)
+        for i in range(1, len(sorted_shifts)):
+            prev_shift = sorted_shifts[i - 1]
+            curr_shift = sorted_shifts[i]
+            if prev_shift.is_work_shift() and curr_shift.is_work_shift():
+                prev_end_hour = prev_shift.shift_type.hours_range()[1]
+                curr_start_hour = curr_shift.shift_type.hours_range()[0]
+                hours_between = (curr_shift.date - prev_shift.date).days * 24 + (
+                    curr_start_hour - prev_end_hour
+                )
+                if hours_between < REST_GAP:
+                    break_constraint(worker_id, prev_shift, curr_shift, hours_between)
+
+    return constraint_broken
