@@ -1,9 +1,13 @@
 from collections import defaultdict
 
 try:
+    from constraints.violation import ConstraintSeverity as Severity
+    from constraints.violation import collector
     from model.schedule import Schedule
     from model.shift_type import ShiftType, ShiftWorkType
 except ModuleNotFoundError:
+    from src.constraints.violation import ConstraintSeverity as Severity
+    from src.constraints.violation import collector
     from src.model.schedule import Schedule
     from src.model.shift_type import ShiftType, ShiftWorkType
 
@@ -73,5 +77,35 @@ def shift_continuation(schedule: Schedule) -> float:
 
 def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
     """Score the schedule based on how well it matches the preferred schedule."""
+    WRONG_SHIFT_PENALTY = 1.0
 
-    return 0.0
+    def issue_warning(worker_id: int, date: str, message: str) -> None:
+        worker = schedule.get_worker(worker_id)
+        if worker is None:
+            collector.add_current(
+                severity=Severity.WARNING,
+                message=f"Worker with id {worker_id} not found on schedule.",
+                worker_id=worker_id,
+                details={"date": date, "message": message},
+            )
+        else:
+            collector.add_current(
+                severity=Severity.WARNING,
+                message=f"Worker {worker.name} on {date}: {message}",
+                worker_id=worker_id,
+                details={"date": date, "message": message},
+            )
+
+    total_score = 0.0
+    for worker_id, preferred_shifts in preferences.shifts_by_worker.items():
+        worker_score = 0.0
+        for p_shift in preferred_shifts:
+            actual_shift = schedule.get_shift(worker_id, p_shift.date)
+            if not actual_shift:
+                issue_warning(worker_id, p_shift.date.isoformat(), "No shift assigned")
+                continue
+            if actual_shift.shift_type != p_shift.shift_type:
+                worker_score += WRONG_SHIFT_PENALTY
+        total_score += worker_score
+
+    return total_score

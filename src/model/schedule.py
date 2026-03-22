@@ -31,6 +31,14 @@ class Schedule:
             raise ValueError("Shift date out of schedule range")
         self.shifts_by_worker.setdefault(shift.worker.id, []).append(shift)
 
+    def get_shift(self, worker_id: int, shift_date: date) -> Shift | None:
+        """Return the shift for a given worker and date, or None if not found."""
+        worker_shifts = self.shifts_by_worker.get(worker_id, [])
+        for shift in worker_shifts:
+            if shift.date == shift_date:
+                return shift
+        return None
+
     def shifts_on(self, d: date) -> list[Shift]:
         """Return all shifts scheduled on date `d`."""
         if not self.is_date_within_range(d):
