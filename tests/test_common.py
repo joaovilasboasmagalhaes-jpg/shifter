@@ -2,14 +2,9 @@ from datetime import date
 
 import pytest
 
-try:
-    from loader.loader import _parse_import_dates, _parse_shift_types
-    from model.config import Config
-    from model.shift_type import ShiftBreakType, ShiftWorkType
-except ModuleNotFoundError:
-    from src.loader.loader import _parse_import_dates, _parse_shift_types
-    from src.model.config import Config
-    from src.model.shift_type import ShiftBreakType, ShiftWorkType
+from src.loader.loader import _parse_import_dates, _parse_shift_types
+from src.model.config import Config
+from src.model.shift_type import ShiftBreakType, ShiftWorkType
 
 
 def test_parse_import_dates_accepts_date_and_datetime():

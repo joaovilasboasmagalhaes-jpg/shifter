@@ -2,20 +2,12 @@ from datetime import date, timedelta
 
 import pytest
 
-try:
-    from constraints.hard import five_consecutive_shifts, monthly_weekend, rest_gap
-    from constraints.violation import ConstraintSeverity, collector
-    from model.schedule import Schedule
-    from model.shift import Shift
-    from model.shift_type import ShiftBreakType, ShiftWorkType
-    from model.worker import Worker
-except ModuleNotFoundError:
-    from src.constraints.hard import five_consecutive_shifts, monthly_weekend, rest_gap
-    from src.constraints.violation import ConstraintSeverity, collector
-    from src.model.schedule import Schedule
-    from src.model.shift import Shift
-    from src.model.shift_type import ShiftBreakType, ShiftWorkType
-    from src.model.worker import Worker
+from src.constraints.hard import five_consecutive_shifts, monthly_weekend, rest_gap
+from src.constraints.violation import ConstraintSeverity, collector
+from src.model.schedule import Schedule
+from src.model.shift import Shift
+from src.model.shift_type import ShiftBreakType, ShiftWorkType
+from src.model.worker import Worker
 
 
 @pytest.fixture(autouse=True)

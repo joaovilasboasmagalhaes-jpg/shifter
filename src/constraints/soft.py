@@ -1,15 +1,9 @@
 from collections import defaultdict
 
-try:
-    from constraints.violation import ConstraintSeverity as Severity
-    from constraints.violation import collector
-    from model.schedule import Schedule
-    from model.shift_type import ShiftType, ShiftWorkType
-except ModuleNotFoundError:
-    from src.constraints.violation import ConstraintSeverity as Severity
-    from src.constraints.violation import collector
-    from src.model.schedule import Schedule
-    from src.model.shift_type import ShiftType, ShiftWorkType
+from src.constraints.violation import ConstraintSeverity as Severity
+from src.constraints.violation import collector
+from src.model.schedule import Schedule
+from src.model.shift_type import ShiftType, ShiftWorkType
 
 
 def balanced_schedule(schedule: Schedule) -> float:

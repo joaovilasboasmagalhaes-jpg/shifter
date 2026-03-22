@@ -1,12 +1,8 @@
 from dataclasses import dataclass
 from datetime import date
 
-try:
-    from model.shift_type import ShiftType
-    from model.worker import Worker
-except ModuleNotFoundError:
-    from src.model.shift_type import ShiftType
-    from src.model.worker import Worker
+from src.model.shift_type import ShiftType
+from src.model.worker import Worker
 
 
 @dataclass

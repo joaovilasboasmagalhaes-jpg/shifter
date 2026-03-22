@@ -1,17 +1,10 @@
 from datetime import date
 
-try:
-    from constraints.soft import balanced_schedule, shift_continuation
-    from model.schedule import Schedule
-    from model.shift import Shift
-    from model.shift_type import ShiftWorkType
-    from model.worker import Worker
-except ModuleNotFoundError:
-    from src.constraints.soft import balanced_schedule, shift_continuation
-    from src.model.schedule import Schedule
-    from src.model.shift import Shift
-    from src.model.shift_type import ShiftWorkType
-    from src.model.worker import Worker
+from src.constraints.soft import balanced_schedule, shift_continuation
+from src.model.schedule import Schedule
+from src.model.shift import Shift
+from src.model.shift_type import ShiftWorkType
+from src.model.worker import Worker
 
 
 def test_balanced_schedule_real_objects():

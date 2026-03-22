@@ -4,6 +4,7 @@ from typing import cast
 
 from src.model.shift import Shift
 from src.model.worker import Worker
+from src.utils.errors.error_handler import ErrorHandler as Error
 
 
 @dataclass
@@ -28,7 +29,9 @@ class Schedule:
         Raises ValueError if the shift date is outside the inclusive range.
         """
         if not self.is_date_within_range(shift.date):
-            raise ValueError("Shift date out of schedule range")
+            raise ValueError(
+                Error.get_message("errors.shift_date_out_of_range", date=shift.date)
+            )
         self.shifts_by_worker.setdefault(shift.worker.id, []).append(shift)
 
     def get_shift(self, worker_id: int, shift_date: date) -> Shift | None:
@@ -42,7 +45,7 @@ class Schedule:
     def shifts_on(self, d: date) -> list[Shift]:
         """Return all shifts scheduled on date `d`."""
         if not self.is_date_within_range(d):
-            raise ValueError("Date is out of schedule range")
+            return []
         return [
             shift
             for worker_shifts in self.shifts_by_worker.values()
@@ -50,11 +53,11 @@ class Schedule:
             if shift.date == d
         ]
 
-    def get_worker(self, worker_id: int) -> Worker:
-        """Return the Worker object for a given worker id."""
+    def get_worker(self, worker_id: int) -> Worker | None:
+        """Return the Worker object for a given worker id, or None if not found."""
         worker_shifts = self.shifts_by_worker.get(worker_id)
         if not worker_shifts:
-            raise ValueError(f"No shifts found for worker id {worker_id}")
+            return None
         return worker_shifts[0].worker
 
     def shifts_for_worker(self, worker_id: int) -> list[Shift]:

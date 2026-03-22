@@ -1,17 +1,11 @@
 from datetime import date
 
-try:
-    from constraints.violation import ConstraintSeverity as Severity
-    from constraints.violation import collector, constraint
-    from model.schedule import Schedule
-    from model.shift import Shift
-    from utils.date_utils import dates_in_month, next_day
-except ModuleNotFoundError:
-    from src.constraints.violation import ConstraintSeverity as Severity
-    from src.constraints.violation import collector, constraint
-    from src.model.schedule import Schedule
-    from src.model.shift import Shift
-    from src.utils.date_utils import dates_in_month, next_day
+from src.constraints.violation import ConstraintSeverity as Severity
+from src.constraints.violation import collector, constraint
+from src.model.schedule import Schedule
+from src.model.shift import Shift
+from src.utils.date_utils import dates_in_month, next_day
+from src.utils.errors.error_handler import ErrorHandler as Error
 
 
 @constraint("Five Consecutive Shifts")
@@ -23,9 +17,15 @@ def five_consecutive_shifts(schedule: Schedule) -> bool:
     def break_constraint(worker_id: int, shifts: list[Shift]) -> None:
         nonlocal constraint_broken
         worker = schedule.get_worker(worker_id)
+        if worker is None:
+            raise ValueError(
+                Error.get_message("errors.worker_not_found", worker_id=worker_id)
+            )
         collector.add_current(
             severity=Severity.ERROR,
-            message=f"Worker {worker.name} has more than 5 consecutive shifts.",
+            message=Error.get_message(
+                "constraints.hard.consecutive_shifts", worker=worker
+            ),
             worker_id=worker_id,
             details={"consecutive_shifts": [s.__repr__() for s in shifts]},
         )
@@ -106,16 +106,23 @@ def monthly_weekend(schedule: Schedule) -> bool:
 
         def _validate_weekend_date(self, date: date) -> None:
             if date not in self.map_weekend:
-                raise ValueError(f"Date {date} is not a weekend day in this month.")
+                raise ValueError(
+                    Error.get_message("errors.not_a_weekend_day", date=date)
+                )
 
     def break_constraint(worker_id: int, month_key: tuple[int, int]) -> None:
         nonlocal constraint_broken
         worker = schedule.get_worker(worker_id)
+        if worker is None:
+            raise ValueError(
+                Error.get_message("errors.worker_not_found", worker_id=worker_id)
+            )
         collector.add_current(
             severity=Severity.ERROR,
             message=(
-                f"Worker {worker.name} has no full weekend off in "
-                f"{month_key[0]}-{month_key[1]:02d}."
+                Error.get_message(
+                    "constraints.soft.weekend_shift", worker=worker, month_key=month_key
+                )
             ),
             worker_id=worker_id,
             details={"month": f"{month_key[0]}-{month_key[1]:02d}"},
@@ -124,12 +131,16 @@ def monthly_weekend(schedule: Schedule) -> bool:
 
     def issue_warning(worker_id: int, ww: WorkingWeekend) -> None:
         worker = schedule.get_worker(worker_id)
+        if worker is None:
+            raise ValueError(
+                Error.get_message("errors.worker_not_found", worker_id=worker_id)
+            )
         collector.add_current(
             severity=Severity.WARNING,
             message=(
-                f"Missing weekend shift data for worker {worker.name} in "
-                f"{ww.days[0].isoformat()} - {ww.days[1].isoformat()}. "
-                "Working weekend constraint not applied for this month for this worker."
+                Error.get_message(
+                    "constraints.soft.missing_weekend", worker=worker, ww=ww
+                )
             ),
             worker_id=worker_id,
             details={
@@ -175,6 +186,10 @@ def rest_gap(schedule: Schedule) -> bool:
     ) -> None:
         nonlocal constraint_broken
         worker = schedule.get_worker(worker_id)
+        if worker is None:
+            raise ValueError(
+                Error.get_message("errors.worker_not_found", worker_id=worker_id)
+            )
         collector.add_current(
             severity=Severity.ERROR,
             message=(

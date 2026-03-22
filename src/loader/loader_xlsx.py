@@ -1,12 +1,8 @@
 
 from typing import Any
 
-try:
-    from model.config import AxisConfig, ImportConfig
-    from utils.loading import open_excel_workbook, read_excel_matrix
-except ModuleNotFoundError:
-    from src.model.config import AxisConfig, ImportConfig
-    from src.utils.loading import open_excel_workbook, read_excel_matrix
+from src.model.config import AxisConfig, ImportConfig
+from src.utils.loading import open_excel_workbook, read_excel_matrix
 
 
 def _read_axis_values(sheet: Any, axis_config: AxisConfig) -> list[Any]:

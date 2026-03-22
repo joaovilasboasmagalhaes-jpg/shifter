@@ -1,10 +1,8 @@
 from enum import Enum
 from typing import Tuple
 
-try:
-    from model.config import Config
-except ModuleNotFoundError:
-    from src.model.config import Config
+from src.model.config import Config
+from src.utils.errors.error_handler import ErrorHandler as Error
 
 
 class ShiftType(Enum):
@@ -44,7 +42,9 @@ class ShiftType(Enum):
             ValueError: If this shift type does not have defined hours.
         """
         if self.hours is None:
-            raise ValueError(f"ShiftType {self.name} does not have defined hours")
+            raise ValueError(
+                Error.get_message("errors.shift_type_no_hours", name=self.name)
+            )
         return self.hours
 
     def to_string(self) -> str:
@@ -85,7 +85,11 @@ class ShiftType(Enum):
                     return enum_cls.from_short_label(short_label)
                 except ValueError:
                     continue
-            raise ValueError(f"Unknown shift short label: {short_label}")
+            raise ValueError(
+                Error.get_message(
+                    "errors.unknown_shift_short_label", short_label=short_label
+                )
+            )
 
         for member in cls:
             configured_label = member._effective_short_label()
@@ -93,7 +97,13 @@ class ShiftType(Enum):
             if short_label == configured_label or short_label == default_label:
                 return member
 
-        raise ValueError(f"Unknown {cls.__name__} short label: {short_label}")
+        raise ValueError(
+            Error.get_message(
+                "errors.unknown_class_short_label",
+                class_name=cls.__name__,
+                short_label=short_label,
+            )
+        )
 
 
 class ShiftWorkType(ShiftType):
