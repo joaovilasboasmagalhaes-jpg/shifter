@@ -139,7 +139,10 @@ def monthly_weekend(schedule: Schedule) -> bool:
             severity=Severity.WARNING,
             message=(
                 Error.get_message(
-                    "constraints.soft.missing_weekend", worker=worker, ww=ww
+                    "constraints.soft.missing_weekend",
+                    worker=worker,
+                    ww0=ww.days[0].isoformat(),
+                    ww1=ww.days[1].isoformat(),
                 )
             ),
             worker_id=worker_id,

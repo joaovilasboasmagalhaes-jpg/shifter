@@ -5,6 +5,8 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import TypeVar, cast
 
+from src.utils.errors.error_handler import ErrorHandler as Error
+
 _F = TypeVar("_F", bound=Callable)
 _CONSTRAINT_DISPLAY_NAMES: dict[str, str] = {}
 
@@ -22,7 +24,7 @@ def constraint(name: str) -> Callable[[_F], _F]:
     def decorator(fn: _F) -> _F:
         if "break_constraint" not in fn.__code__.co_varnames:
             raise ValueError(
-                f"Constraint '{fn.__name__}' must define a local 'break_constraint' method"
+                Error.get_message("system_errors.break_constraint_required", fn=fn)
             )
         _CONSTRAINT_DISPLAY_NAMES[fn.__name__] = name
         fn.constraint_name = name  # type: ignore[attr-defined]

@@ -33,9 +33,9 @@ class ErrorHandler:
 
     @classmethod
     def get_message(cls, key: str, default=None, **kwargs) -> str:
-        keys = key.split(".")
         if not cls._messages:
             cls.load_messages()
+        keys = key.split(".")
         dicts = cls._messages
         for k in keys:
             if not isinstance(dicts, dict):

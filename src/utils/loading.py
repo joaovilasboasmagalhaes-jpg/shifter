@@ -17,7 +17,7 @@ def resolve_file_path(
     2) extension already present in ``file_path``.
     """
     if not file_path:
-        raise ValueError(Error.get_message("errors.file_path_required"))
+        raise ValueError(Error.get_message("system_errors.file_path_required"))
 
     path = Path(file_path).expanduser()
     normalized_file_type = (file_type or "").strip().lower().lstrip(".")
@@ -34,11 +34,13 @@ def resolve_file_path(
 def validate_existing_file_path(file_path: str) -> str:
     """Validate that a file path exists and points to a file."""
     if not file_path:
-        raise ValueError(Error.get_message("errors.file_path_required"))
+        raise ValueError(Error.get_message("system_errors.file_path_required"))
 
     path = Path(file_path).expanduser()
     if not path.exists() or not path.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise FileNotFoundError(
+            Error.get_message("system_errors.file_not_found", path=path)
+        )
 
     return str(path)
 
@@ -52,23 +54,23 @@ def load_json_config(
     """
     path = Path(validate_existing_file_path(config_path))
     if path.suffix.lower() != ".json":
-        raise ValueError(Error.get_message("errors.config_file_json", path=path))
+        raise ValueError(Error.get_message("system_errors.config_file_json", path=path))
 
     try:
         with path.open("r", encoding="utf-8") as config_file:
             config_data = json.load(config_file)
     except json.JSONDecodeError as exc:
         raise ValueError(
-            Error.get_message("errors.invalid_json", path=path, msg=exc.msg)
+            Error.get_message("system_errors.invalid_json", path=path, msg=exc.msg)
         ) from exc
 
     if not isinstance(config_data, dict):
-        raise ValueError(Error.get_message("errors.config_json_object"))
+        raise ValueError(Error.get_message("system_errors.config_json_object"))
 
     for key in required_root_keys or ():
         if key not in config_data:
             raise ValueError(
-                Error.get_message("errors.config_json_key_object", key=key)
+                Error.get_message("system_errors.config_json_key_object", req_key=key)
             )
 
     return config_data

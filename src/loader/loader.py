@@ -21,7 +21,7 @@ def _resolve_file_type(args: argparse.Namespace) -> str:
         file_type=getattr(args, "file_type", None),
     )
     if not resolved_file_type:
-        raise ValueError(Error.get_message("errors.could_not_resolve_file_type"))
+        raise ValueError(Error.get_message("system_errors.could_not_resolve_file_type"))
 
     args.file_path = resolved_file_path
     return resolved_file_type
@@ -57,7 +57,7 @@ def _parse_shift_types(raw_shifts: list[list[object]]) -> list[list[ShiftType]]:
             except ValueError as exc:
                 raise ValueError(
                     Error.get_message(
-                        "errors.invalid_shift_label",
+                        "system_errors.invalid_shift_label",
                         row=row_index,
                         col=col_index,
                         cell=cell,
@@ -97,7 +97,9 @@ def load_file(args: argparse.Namespace) -> Schedule:
         raw_shifts = loaded.get("shifts", [])
     else:
         raise NotImplementedError(
-            Error.get_message("errors.unsupported_file_type", file_type=file_type)
+            Error.get_message(
+                "system_errors.unsupported_file_type", file_type=file_type
+            )
         )
 
     shift_types = _parse_shift_types(raw_shifts)

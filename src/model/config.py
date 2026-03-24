@@ -122,9 +122,11 @@ class Config:
     def get_instance(cls) -> "Config":
         """Return the initialized singleton or raise if it is not ready."""
         if cls._instance is None or cls._instance._import_settings is None:
+            method_ref: str = cls.load_from_file.__qualname__
             raise RuntimeError(
-                "Config singleton is not initialized. "
-                "Call Config.load_from_file(...) during startup first."
+                Error.get_message(
+                    "errors.config_not_initialized", method_ref=method_ref
+                )
             )
         return cls._instance
 

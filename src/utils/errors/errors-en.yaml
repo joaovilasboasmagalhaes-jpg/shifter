@@ -1,19 +1,14 @@
 system_errors:
   file_path_required: "file_path is required."
+  file_not_found: "File not found: {path}."
   config_file_json: "Config file must be a .json file: {path}."
   invalid_json: "Invalid JSON in config file {path}: {msg}."
   config_json_object: "Config JSON must contain an object at the root."
-  config_json_key_object: "Config JSON must contain a '{key}' object."
-  config_file_yaml: "Config file must be a .yaml or .yml file: {path}."
-  invalid_yaml: "Invalid YAML in config file {path}: {msg}."
-  config_yaml_object: "Config YAML must contain an object at the root."
-  config_yaml_key_object: "Config YAML must contain a '{key}' object."
-  start_row_col_ge_1: "start_row and start_col must be greater than or equal to 1."
-  row_col_ge_0: "row_count and col_count must be greater than or equal to 0."
+  config_json_key_object: "Config JSON must contain a '{req_key}' object."
   could_not_resolve_file_type: "Could not resolve file type. Provide --file-type or use a file path with an extension."
-  invalid_day_at_index: "Invalid day '{day}' at date index {idx} for {year:04d}-{month:02d}."
   invalid_shift_label: "Invalid shift label at row {row}, column {col}: {cell!r}."
   unsupported_file_type: "Unsupported file type: {file_type}."
+  break_constraint_required: "Constraint '{fn.__name__}' must define a local 'break_constraint' method"
 
 constraints:
   hard:
@@ -21,20 +16,26 @@ constraints:
 
   soft:
     weekend_shift: "Worker {worker.name} has no full weekend off in {month_key[0]}-{month_key[1]:02d}."
-    missing_weekend: "Missing weekend shift data for worker {worker.name} in {ww.days[0].isoformat()} - {ww.days[1].isoformat()}. Working weekend constraint not applied for this month for this worker."
+    missing_weekend: "Missing weekend shift data for worker {worker.name} in {ww0} - {ww1}. Working weekend constraint not applied for this month for this worker."
 
 errors:
   shift_type_no_hours: "ShiftType {name} does not have defined hours."
   unknown_shift_short_label: "Unknown shift short label: {short_label}."
   unknown_class_short_label: "Unknown {class_name} short label: {short_label}."
+  start_row_col_ge_1: "start_row and start_col must be greater than or equal to 1."
+  row_col_ge_0: "row_count and col_count must be greater than or equal to 0."
   not_a_weekend_day: "Date {date} is not a weekend day in this month."
-  worker_not_found: "No worker found for worker id {worker_id}"
+  worker_not_found: "No worker found for worker id {worker_id}."
   shift_date_out_of_range: "Shift date {date} is out of schedule range."
   config_section_object: "Config section '{section}' must contain an object."
   config_section_index: "Config section '{section}.index' must be an integer greater than or equal to 1."
+  invalid_day_at_index: "Invalid day '{day}' at date index {idx} for {year:04d}-{month:02d}."
   import_key_object: "Config 'import' key must contain an object."
   import_year_int: "Import config 'year' must be an integer."
   import_month_int: "Import config 'month' must be an integer."
+  import_day_int: "Import config 'day' must be an integer."
   import_month_range: "Import config 'month' must be between 1 and 12."
+  import_day_range: "Invalid day '{day}' for {year:04d}-{month:02d}."
   import_shift_types_object: "Import config 'shift_types' must contain an object."
   config_data_mapping: "Config data must be a mapping."
+  config_not_initialized: "Config singleton is not initialized. Call {method_ref}(...) during startup first."
