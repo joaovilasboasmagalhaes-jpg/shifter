@@ -31,3 +31,14 @@ Example config:
 	}
 }
 ```
+
+## Constraints
+
+Hard constraints currently include:
+
+- Five Consecutive Shifts
+- Rest Gap
+
+Soft constraints are score-based penalties. Lower score is better.
+
+- Monthly Weekend Off: each working weekend adds a penalty of `1.0`.

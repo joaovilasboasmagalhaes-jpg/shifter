@@ -1,9 +1,9 @@
 from datetime import date
 
-from src.constraints.soft import balanced_schedule, shift_continuation
+from src.constraints.soft import balanced_schedule, monthly_weekend, shift_continuation
 from src.model.schedule import Schedule
 from src.model.shift import Shift
-from src.model.shift_type import ShiftWorkType
+from src.model.shift_type import ShiftBreakType, ShiftWorkType
 from src.model.worker import Worker
 
 
@@ -125,3 +125,99 @@ def test_shift_continuation_single_worker_no_shifts():
     # No shifts assigned
     result = shift_continuation(sched)
     assert abs(result) < 1e-6
+
+
+# --- monthly_weekend tests ---
+def test_monthly_weekend_penalizes_all_working_weekends_in_month():
+    Worker.reset_ids()
+    worker = Worker("Henry")
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+    # March 2026 weekends: (7,8), (14,15), (21,22), (28,29)
+    worked_days = [
+        date(2026, 3, 7),
+        date(2026, 3, 14),
+        date(2026, 3, 21),
+        date(2026, 3, 28),
+    ]
+    for d in worked_days:
+        sched.add_shift(Shift(shift_type=ShiftWorkType.MORNING, date=d, worker=worker))
+
+    result = monthly_weekend(sched)
+    assert isinstance(result, float)
+    assert abs(result - 4.0) < 1e-6
+
+
+def test_monthly_weekend_scores_only_working_weekends():
+    Worker.reset_ids()
+    worker = Worker("Iris")
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+    # Three working weekends and one full weekend off.
+    for d in [date(2026, 3, 7), date(2026, 3, 14), date(2026, 3, 21)]:
+        sched.add_shift(Shift(shift_type=ShiftWorkType.MORNING, date=d, worker=worker))
+
+    result = monthly_weekend(sched)
+    assert abs(result - 3.0) < 1e-6
+
+
+def test_monthly_weekend_break_shift_does_not_count_as_working():
+    Worker.reset_ids()
+    worker = Worker("Kai")
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+    for d in [date(2026, 3, 7), date(2026, 3, 14), date(2026, 3, 21)]:
+        sched.add_shift(Shift(shift_type=ShiftWorkType.MORNING, date=d, worker=worker))
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 28), worker=worker)
+    )
+
+    result = monthly_weekend(sched)
+    assert abs(result - 3.0) < 1e-6
+
+
+def test_monthly_weekend_two_break_days_make_weekend_off():
+    Worker.reset_ids()
+    worker = Worker("Mona")
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+    for d in [date(2026, 3, 7), date(2026, 3, 14), date(2026, 3, 21)]:
+        sched.add_shift(Shift(shift_type=ShiftWorkType.MORNING, date=d, worker=worker))
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 28), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 29), worker=worker)
+    )
+
+    result = monthly_weekend(sched)
+    assert abs(result - 3.0) < 1e-6
+
+
+def test_monthly_weekend_mixed_work_and_break_weekend_counts_as_working():
+    Worker.reset_ids()
+    worker = Worker("Nora")
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+    sched.add_shift(
+        Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 7), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 8), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 14), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 15), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 21), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 22), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 28), worker=worker)
+    )
+    sched.add_shift(
+        Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 29), worker=worker)
+    )
+
+    result = monthly_weekend(sched)
+    assert abs(result - 4.0) < 1e-6

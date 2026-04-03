@@ -1,9 +1,13 @@
 from collections import defaultdict
+from datetime import date
 
 from src.constraints.violation import ConstraintSeverity as Severity
 from src.constraints.violation import collector
 from src.model.schedule import Schedule
+from src.model.shift import Shift
 from src.model.shift_type import ShiftType, ShiftWorkType
+from src.utils.date_utils import dates_in_month, next_day
+from src.utils.errors.error_handler import ErrorHandler as Error
 
 
 def balanced_schedule(schedule: Schedule) -> float:
@@ -101,5 +105,98 @@ def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
             if actual_shift.shift_type != p_shift.shift_type:
                 worker_score += WRONG_SHIFT_PENALTY
         total_score += worker_score
+
+    return total_score
+
+
+def monthly_weekend(schedule: Schedule) -> float:
+    """Score the schedule based on the number of weekends each worker has off."""
+    WORKING_WEEKEND_PENALTY = 1.0
+
+    class WorkingWeekend:
+        """Helper class to track the status of a weekend."""
+
+        days: tuple[date, date]
+        status: str = "unknown"  # "working", "off", "half-off" or "unknown"
+
+        def __init__(self, days: tuple[date, date]):
+            self.days = days
+
+        def register_shift(self, shift: Shift) -> None:
+            if self.unknown():
+                if shift.is_work_shift():
+                    self.status = "working"
+                else:
+                    self.status = "half-off"
+            elif self._half_off() and not shift.is_work_shift():
+                self.status = "off"
+            else:
+                self.status = "working"
+
+        def unknown(self) -> bool:
+            return self.status == "unknown"
+
+        def working(self) -> bool:
+            return self.status == "working"
+
+        def _half_off(self) -> bool:
+            return self.status == "half-off"
+
+    class WorkingWeekendMonth:
+        """Helper class to track working weekends for a specific month."""
+
+        weekends: list[WorkingWeekend] = []
+        map_weekend: dict[date, int] = {}  # Map from date to index of weekend
+        month_days: list[date]
+
+        def __init__(self, year: int, month: int):
+            self.month_days = dates_in_month(year, month)
+            # Exclude the last day to avoid broken weekend
+            for day in self.month_days[:-1]:
+                if day.weekday() == 5:  # Saturday
+                    sunday = next_day(day)
+                    self.weekends.append(WorkingWeekend(days=(day, sunday)))
+                    index = len(self.weekends) - 1
+                    self.map_weekend[day] = index
+                    self.map_weekend[sunday] = index
+
+        def register_shift(self, shift: Shift) -> None:
+            weekend = self._get_weekend(shift.date)
+            weekend.register_shift(shift)
+
+        def _get_weekend(self, date: date) -> WorkingWeekend:
+            self._validate_weekend_date(date)
+            weekend_index = self.map_weekend[date]
+            return self.weekends[weekend_index]
+
+        def _validate_weekend_date(self, date: date) -> None:
+            if date not in self.map_weekend:
+                raise ValueError(
+                    Error.get_message("errors.not_a_weekend_day", date=date)
+                )
+
+    total_score = 0.0
+    for worker_id, shifts in schedule.shifts_by_worker.items():
+        worker_score = 0.0
+        # Group shifts by month
+        shifts_by_month: dict[tuple[int, int], list[Shift]] = {}
+        for shift in shifts:
+            month_key = (shift.date.year, shift.date.month)
+            shifts_by_month.setdefault(month_key, []).append(shift)
+
+        for (year, month), month_shifts in shifts_by_month.items():
+            wwk_month = WorkingWeekendMonth(year, month)
+
+            # Build weekend shift map for the month
+            for shift in month_shifts:
+                if shift.date in wwk_month.map_weekend:
+                    wwk_month.register_shift(shift)
+
+            # Working weekends
+            for ww in wwk_month.weekends:
+                if ww.working():
+                    worker_score += WORKING_WEEKEND_PENALTY
+
+            total_score += worker_score
 
     return total_score
