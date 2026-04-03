@@ -175,6 +175,29 @@ def monthly_weekend(schedule: Schedule) -> float:
                     Error.get_message("errors.not_a_weekend_day", date=date)
                 )
 
+    def issue_warning(worker_id: int, ww: WorkingWeekend) -> None:
+        worker = schedule.get_worker(worker_id)
+        if worker is None:
+            raise ValueError(
+                Error.get_message("errors.worker_not_found", worker_id=worker_id)
+            )
+        collector.add_current(
+            severity=Severity.WARNING,
+            message=(
+                Error.get_message(
+                    "constraints.soft.missing_weekend",
+                    worker=worker,
+                    ww0=ww.days[0].isoformat(),
+                    ww1=ww.days[1].isoformat(),
+                )
+            ),
+            worker_id=worker_id,
+            details={
+                "missing_weekend": [d.isoformat() for d in ww.days],
+                "worker_id": worker_id,
+            },
+        )
+
     total_score = 0.0
     for worker_id, shifts in schedule.shifts_by_worker.items():
         worker_score = 0.0
@@ -196,6 +219,8 @@ def monthly_weekend(schedule: Schedule) -> float:
             for ww in wwk_month.weekends:
                 if ww.working():
                     worker_score += WORKING_WEEKEND_PENALTY
+                elif ww.unknown():
+                    issue_warning(worker_id, ww)
 
             total_score += worker_score
 

@@ -1,5 +1,3 @@
-
-
 from pathlib import Path
 
 import yaml
@@ -9,6 +7,7 @@ import yaml
 class ErrorMessageNotFound(KeyError):
     def __init__(self, key):
         super().__init__(f"Error message not found for key: '{key}'")
+
 
 class ErrorHandler:
     _messages: dict[str, str] = {}
@@ -28,8 +27,6 @@ class ErrorHandler:
             if not isinstance(config_data, dict):
                 raise ValueError("Config YAML must contain an object at the root")
             cls._messages = config_data
-            
-    
 
     @classmethod
     def get_message(cls, key: str, default=None, **kwargs) -> str:
