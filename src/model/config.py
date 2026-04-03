@@ -3,10 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Tuple, cast
 
-try:
-    from common import load_json_config
-except ModuleNotFoundError:
-    from src.common import load_json_config
+from src.utils.errors.error_handler import ErrorHandler as Error
+from src.utils.loading import load_json_config
 
 
 @dataclass(frozen=True)
@@ -20,13 +18,15 @@ class AxisConfig:
     @classmethod
     def from_mapping(cls, data: object, *, section_name: str) -> "AxisConfig":
         if not isinstance(data, Mapping):
-            raise ValueError(f"Config section '{section_name}' must contain an object")
+            raise ValueError(
+                Error.get_message("errors.config_section_object", section=section_name)
+            )
 
         mapping = cast(Mapping[str, Any], data)
         index = mapping.get("index")
         if not isinstance(index, int) or index < 1:
             raise ValueError(
-                f"Config section '{section_name}.index' must be an integer greater than or equal to 1"
+                Error.get_message("errors.config_section_index", section=section_name)
             )
 
         return cls(
@@ -52,7 +52,7 @@ class ImportConfig:
     @classmethod
     def from_mapping(cls, data: object) -> "ImportConfig":
         if not isinstance(data, Mapping):
-            raise ValueError("Config 'import' key must contain an object")
+            raise ValueError(Error.get_message("errors.import_key_object"))
 
         mapping = cast(Mapping[str, Any], data)
         year = mapping.get("year")
@@ -60,13 +60,13 @@ class ImportConfig:
         shift_types = mapping.get("shift_types", {})
 
         if not isinstance(year, int):
-            raise ValueError("Import config 'year' must be an integer")
+            raise ValueError(Error.get_message("errors.import_year_int"))
         if not isinstance(month, int):
-            raise ValueError("Import config 'month' must be an integer")
+            raise ValueError(Error.get_message("errors.import_month_int"))
         if month < 1 or month > 12:
-            raise ValueError("Import config 'month' must be between 1 and 12")
+            raise ValueError(Error.get_message("errors.import_month_range"))
         if not isinstance(shift_types, Mapping):
-            raise ValueError("Import config 'shift_types' must contain an object")
+            raise ValueError(Error.get_message("errors.import_shift_types_object"))
 
         shift_type_labels = {
             str(key): str(value)
@@ -122,9 +122,11 @@ class Config:
     def get_instance(cls) -> "Config":
         """Return the initialized singleton or raise if it is not ready."""
         if cls._instance is None or cls._instance._import_settings is None:
+            method_ref: str = cls.load_from_file.__qualname__
             raise RuntimeError(
-                "Config singleton is not initialized. "
-                "Call Config.load_from_file(...) during startup first."
+                Error.get_message(
+                    "errors.config_not_initialized", method_ref=method_ref
+                )
             )
         return cls._instance
 
@@ -151,7 +153,7 @@ class Config:
     def set_data(cls, data: object) -> "Config":
         """Set singleton config data directly (useful for tests/bootstrap)."""
         if not isinstance(data, Mapping):
-            raise ValueError("Config data must be a mapping")
+            raise ValueError(Error.get_message("errors.config_data_mapping"))
         instance = cls.instance()
         instance._set_loaded_data(dict(cast(Mapping[str, Any], data)), None)
         return instance
@@ -199,5 +201,5 @@ class Config:
     def import_config(self) -> ImportConfig:
         """Return validated import configuration section."""
         if self._import_settings is None:
-            raise ValueError("Config 'import' key must contain an object")
+            raise ValueError(Error.get_message("errors.import_key_object"))
         return self._import_settings

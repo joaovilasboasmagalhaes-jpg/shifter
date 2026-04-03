@@ -36,11 +36,10 @@ def test_schedule_str_and_counts():
     assert "(2 shifts)" in sched.to_string()
 
 
-def test_shifts_on_out_of_range_raises():
+def test_shifts_on_out_of_range_returns_empty_list():
     sched = Schedule(start_date=date(2026, 3, 10), end_date=date(2026, 3, 20))
-    # asking for shifts on a date outside the schedule should raise
-    with pytest.raises(ValueError):
-        sched.shifts_on(date(2026, 3, 9))
+    # asking for shifts on a date outside the schedule returns no shifts
+    assert sched.shifts_on(date(2026, 3, 9)) == []
 
 
 def test_shifts_for_worker_returns_only_requested_worker_shifts():

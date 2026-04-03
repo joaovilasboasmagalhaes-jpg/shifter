@@ -1,8 +1,9 @@
 import json
 from contextlib import contextmanager
-from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Iterator, Optional, Tuple
+
+from src.utils.errors.error_handler import ErrorHandler as Error
 
 
 def resolve_file_path(
@@ -16,7 +17,7 @@ def resolve_file_path(
     2) extension already present in ``file_path``.
     """
     if not file_path:
-        raise ValueError("file_path is required")
+        raise ValueError(Error.get_message("system_errors.file_path_required"))
 
     path = Path(file_path).expanduser()
     normalized_file_type = (file_type or "").strip().lower().lstrip(".")
@@ -33,11 +34,13 @@ def resolve_file_path(
 def validate_existing_file_path(file_path: str) -> str:
     """Validate that a file path exists and points to a file."""
     if not file_path:
-        raise ValueError("file_path is required")
+        raise ValueError(Error.get_message("system_errors.file_path_required"))
 
     path = Path(file_path).expanduser()
     if not path.exists() or not path.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise FileNotFoundError(
+            Error.get_message("system_errors.file_not_found", path=path)
+        )
 
     return str(path)
 
@@ -51,20 +54,24 @@ def load_json_config(
     """
     path = Path(validate_existing_file_path(config_path))
     if path.suffix.lower() != ".json":
-        raise ValueError(f"Config file must be a .json file: {path}")
+        raise ValueError(Error.get_message("system_errors.config_file_json", path=path))
 
     try:
         with path.open("r", encoding="utf-8") as config_file:
             config_data = json.load(config_file)
     except json.JSONDecodeError as exc:
-        raise ValueError(f"Invalid JSON in config file {path}: {exc.msg}") from exc
+        raise ValueError(
+            Error.get_message("system_errors.invalid_json", path=path, msg=exc.msg)
+        ) from exc
 
     if not isinstance(config_data, dict):
-        raise ValueError("Config JSON must contain an object at the root")
+        raise ValueError(Error.get_message("system_errors.config_json_object"))
 
     for key in required_root_keys or ():
         if key not in config_data:
-            raise ValueError(f"Config JSON must contain a '{key}' object")
+            raise ValueError(
+                Error.get_message("system_errors.config_json_key_object", req_key=key)
+            )
 
     return config_data
 
@@ -97,9 +104,9 @@ def read_excel_matrix(
 ) -> list[list[Any]]:
     """Read a rectangular region from a worksheet into a matrix."""
     if start_row < 1 or start_col < 1:
-        raise ValueError("start_row and start_col must be greater than or equal to 1")
+        raise ValueError(Error.get_message("errors.start_row_col_ge_1"))
     if row_count < 0 or col_count < 0:
-        raise ValueError("row_count and col_count must be greater than or equal to 0")
+        raise ValueError(Error.get_message("errors.row_col_ge_0"))
 
     if row_count == 0 or col_count == 0:
         return []
@@ -121,20 +128,3 @@ def read_excel_matrix(
         matrix.append(list(row_values))
 
     return matrix
-
-
-def build_import_date(year: int, month: int, day: int) -> date:
-    """Build a date from imported year/month/day values with validation."""
-    if not isinstance(year, int):
-        raise ValueError("Import config 'year' must be an integer")
-    if not isinstance(month, int):
-        raise ValueError("Import config 'month' must be an integer")
-    if month < 1 or month > 12:
-        raise ValueError("Import config 'month' must be between 1 and 12")
-    if not isinstance(day, int):
-        raise ValueError("Day value must be an integer")
-
-    try:
-        return date(year, month, day)
-    except ValueError as exc:
-        raise ValueError(f"Invalid day '{day}' for {year:04d}-{month:02d}") from exc

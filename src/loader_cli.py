@@ -1,14 +1,8 @@
 import argparse
 
-try:
-    from model.config import Config
-except ModuleNotFoundError:
-    from src.model.config import Config
+from src.loader.loader import load_file
+from src.model.config import Config
 
-try:
-    from loader.loader import load_file
-except ModuleNotFoundError:
-    from src.loader.loader import load_file
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Import shifts from a file")

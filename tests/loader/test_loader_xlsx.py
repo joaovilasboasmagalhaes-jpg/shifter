@@ -1,8 +1,8 @@
 from openpyxl import Workbook
 
-from src.common import read_excel_matrix
 from src.loader.loader_xlsx import _read_axis_values, load_file
 from src.model.config import AxisConfig, ImportConfig
+from src.utils.loading import read_excel_matrix
 
 
 def test_read_axis_values_reads_row_and_skips_header():

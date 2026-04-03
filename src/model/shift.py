@@ -19,6 +19,14 @@ class Shift:
     date: date
     worker: Worker
 
+    def consecutive_shifts(self, other: "Shift") -> bool:
+        """Return True if this shift and the other shift are on consecutive days."""
+        return abs((self.date - other.date).days) == 1
+
+    def is_work_shift(self) -> bool:
+        """Return True if this shift is a work shift, False if it's a break."""
+        return self.shift_type.is_work_shift()
+
     def to_string(self) -> str:
         """Return a human-readable representation of the shift."""
         # Use the shift_type's label (via to_string), ISO date and worker name.
