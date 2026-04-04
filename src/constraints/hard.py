@@ -5,11 +5,11 @@ from src.model.shift import Shift
 from src.utils.errors.error_handler import ErrorHandler as Error
 
 
+@hard_constraint
 @constraint_meta(
     "Five Consecutive Shifts",
     "Ensure that no worker has more than 5 consecutive shifts in a row. Violations are severe and will be reported as errors.",
 )
-@hard_constraint
 def five_consecutive_shifts(schedule: Schedule) -> bool:
     """Ensure that no worker has more than 5 consecutive shifts in a row.
     Returns True if any worker has more than 5 consecutive shifts, else False."""
@@ -48,12 +48,12 @@ def five_consecutive_shifts(schedule: Schedule) -> bool:
     return constraint_broken
 
 
+@hard_constraint
 @constraint_meta(
     "Rest Gap",
     "Ensure that there is at least 11 hours of rest between shifts for each worker. "
     "Violations are severe and will be reported as errors.",
 )
-@hard_constraint
 def rest_gap(schedule: Schedule) -> bool:
     """Ensure that there is at least 11 hours of rest between shifts for each worker.
     Returns True if any worker has less than 11 hours between shifts, else False."""
