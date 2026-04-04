@@ -1,5 +1,6 @@
 import argparse
 
+from src.constraints.constraints_engine import evaluate
 from src.loader.loader import load_file
 from src.model.config import Config
 
@@ -21,8 +22,9 @@ def main() -> None:
     # Parse CLI arguments and pass them to the loader entrypoint.
     args = parse_args()
     Config.load_from_file(args.config_path, required_root_keys=("import",))
-    load_file(args)
-
+    schedule = load_file(args)
+    evaluate(schedule)
+    print("Schedule loaded and evaluated successfully.")
 
 if __name__ == "__main__":
     main()
