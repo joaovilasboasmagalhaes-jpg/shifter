@@ -1,4 +1,3 @@
-import inspect
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -135,18 +134,17 @@ class ViolationCollector:
         message: str,
         worker_id: int | None = None,
         details: dict | None = None,
+        constraint: object = None,
     ) -> ConstraintViolation:
         """Record a violation for the calling constraint function.
 
         This is intended to be called from inside a `@constraint` function,
         so callers don't have to pass the constraint name explicitly.
         """
-        frame = inspect.currentframe()
         constraint_name = "unknown_constraint"
-        while frame := frame.f_back if frame else None:
-            if frame.f_code.co_name in _CONSTRAINT_DISPLAY_NAMES:
-                constraint_name = _CONSTRAINT_DISPLAY_NAMES[frame.f_code.co_name]
-                break
+        if constraint is not None and isinstance(constraint, Constraint):
+            constraint_name = constraint.title
+
         return self.add(
             constraint_name=constraint_name,
             severity=severity,

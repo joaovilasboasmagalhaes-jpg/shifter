@@ -97,6 +97,7 @@ def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
                 message=f"Worker with id {worker_id} not found on schedule.",
                 worker_id=worker_id,
                 details={"date": date, "message": message},
+                constraint=preferred_schedule,
             )
         else:
             collector.add_current(
@@ -104,6 +105,7 @@ def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
                 message=f"Worker {worker.name} on {date}: {message}",
                 worker_id=worker_id,
                 details={"date": date, "message": message},
+                constraint=preferred_schedule,
             )
 
     total_score = 0.0
@@ -212,6 +214,7 @@ def monthly_weekend(schedule: Schedule) -> float:
                 "missing_weekend": [d.isoformat() for d in ww.days],
                 "worker_id": worker_id,
             },
+            constraint=monthly_weekend,
         )
 
     total_score = 0.0

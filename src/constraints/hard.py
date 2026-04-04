@@ -29,6 +29,7 @@ def five_consecutive_shifts(schedule: Schedule) -> bool:
             ),
             worker_id=worker_id,
             details={"consecutive_shifts": [s.__repr__() for s in shifts]},
+            constraint=five_consecutive_shifts,
         )
         constraint_broken = True
 
@@ -80,6 +81,7 @@ def rest_gap(schedule: Schedule) -> bool:
                 "current_shift": curr_shift.__repr__(),
                 "hours_between": hours_between,
             },
+            constraint=rest_gap,
         )
         constraint_broken = True
 
