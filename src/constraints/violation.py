@@ -48,10 +48,10 @@ def hard_constraint(obj):
     return obj
 
 
-def constraint_meta(title: str, description: str) -> Callable[[_F], Constraint]:
+def constraint_meta(title: str, description: str) -> Callable[[Callable], Constraint]:
     """Decorator for all constraints. Wraps the function in a Constraint object with metadata."""
 
-    def decorator(fn: _F) -> Constraint:
+    def decorator(fn: Callable) -> Constraint:
         if not title or not description:
             raise ValueError(
                 Error.get_message("system_errors.title_and_description_required")
@@ -108,6 +108,11 @@ class ViolationCollector:
 
     def __init__(self) -> None:
         self.violations: list[ConstraintViolation] = []
+
+    def get_violations(self, constraint: object) -> list[ConstraintViolation]:
+        """Return all violations associated with a given constraint."""
+        constraint_name = get_constraint_name(constraint)
+        return [v for v in self.violations if v.constraint_name == constraint_name]
 
     def add(
         self,
