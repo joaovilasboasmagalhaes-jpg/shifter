@@ -2,6 +2,7 @@ from src.constraints.violation import ConstraintSeverity as Severity
 from src.constraints.violation import collector, constraint_meta, hard_constraint
 from src.model.schedule import Schedule
 from src.model.shift import Shift
+from src.utils.date_utils import next_day
 from src.utils.errors.error_handler import ErrorHandler as Error
 
 
@@ -39,7 +40,13 @@ def five_consecutive_shifts(schedule: Schedule) -> bool:
         consecutive_count = 1
 
         for i in range(1, len(sorted_shifts)):
-            if (sorted_shifts[i].date - sorted_shifts[i - 1].date).days == 1:
+            shift = sorted_shifts[i]
+            prev_shift = sorted_shifts[i - 1]
+            if (
+                shift.is_work_shift()
+                and prev_shift.is_work_shift()
+                and shift.date == next_day(prev_shift.date)
+            ):
                 consecutive_count += 1
                 if consecutive_count > 5:
                     break_constraint(worker_id, sorted_shifts[i - 5 : i + 1])
