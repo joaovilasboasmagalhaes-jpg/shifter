@@ -9,6 +9,8 @@ system_errors:
   invalid_shift_label: "Invalid shift label at row {row}, column {col}: {cell!r}."
   unsupported_file_type: "Unsupported file type: {file_type}."
   break_constraint_required: "Constraint '{fn.__name__}' must define a local 'break_constraint' method"
+  hard_constraint_after_meta: "@hard_constraint must be applied after @constraint_meta."
+  title_and_description_required: "Both title and description are required for a constraint."
 
 constraints:
   hard:

@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import date
 
 from src.constraints.violation import ConstraintSeverity as Severity
-from src.constraints.violation import collector
+from src.constraints.violation import collector, constraint_meta
 from src.model.schedule import Schedule
 from src.model.shift import Shift
 from src.model.shift_type import ShiftType, ShiftWorkType
@@ -10,8 +10,12 @@ from src.utils.date_utils import dates_in_month, next_day
 from src.utils.errors.error_handler import ErrorHandler as Error
 
 
+@constraint_meta(
+    "Balanced Schedule",
+    "Score the schedule based on how balanced the shifts are among workers. Lower is better.",
+)
 def balanced_schedule(schedule: Schedule) -> float:
-    """Score the schedule based on how balanced the shifts are among workers."""
+    """Score the schedule based on how balanced the shifts are among workers. Lower is better."""
     shift_codes = [shift_type.code for shift_type in ShiftWorkType]
     WEIGHTS: dict[int, float] = {
         stc: 1.0 for stc in shift_codes
@@ -43,8 +47,12 @@ def balanced_schedule(schedule: Schedule) -> float:
     return imbalance_score
 
 
+@constraint_meta(
+    "Shift Continuation",
+    "Score the schedule based on the number of shift changes in consecutive days for each worker. Lower is better.",
+)
 def shift_continuation(schedule: Schedule) -> float:
-    """Score the schedule based on number of shift changes in consecutive days for each worker."""
+    """Score the schedule based on number of shift changes in consecutive days for each worker. Lower is better."""
     shift_codes = [stc.code for sub in ShiftType.__subclasses__() for stc in sub]
     WEIGHTS_FROM_TO: dict[tuple[int, int], float] = {
         (shift_from, shift_to): 1.0
@@ -73,8 +81,12 @@ def shift_continuation(schedule: Schedule) -> float:
     return shift_continuation_score
 
 
+@constraint_meta(
+    "Preferred Schedule",
+    "Score the schedule based on how well it matches the preferred schedule. Lower is better.",
+)
 def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
-    """Score the schedule based on how well it matches the preferred schedule."""
+    """Score the schedule based on how well it matches the preferred schedule. Lower is better."""
     WRONG_SHIFT_PENALTY = 1.0
 
     def issue_warning(worker_id: int, date: str, message: str) -> None:
@@ -109,8 +121,12 @@ def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
     return total_score
 
 
+@constraint_meta(
+    "Monthly Weekend",
+    "Score the schedule based on the number of weekends each worker has off. Lower is better.",
+)
 def monthly_weekend(schedule: Schedule) -> float:
-    """Score the schedule based on the number of weekends each worker has off."""
+    """Score the schedule based on the number of weekends each worker has off. Lower is better."""
     WORKING_WEEKEND_PENALTY = 1.0
 
     class WorkingWeekend:
