@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import date
 
 from src.constraints.violation import ConstraintSeverity as Severity
-from src.constraints.violation import collector, constraint_meta
+from src.constraints.violation import collector, constraint_meta, soft_constraint
 from src.model.schedule import Schedule
 from src.model.shift import Shift
 from src.model.shift_type import ShiftType, ShiftWorkType
@@ -10,11 +10,12 @@ from src.utils.date_utils import dates_in_month, next_day
 from src.utils.errors.error_handler import ErrorHandler as Error
 
 
+@soft_constraint
 @constraint_meta(
     "Balanced Schedule",
     "Score the schedule based on how balanced the shifts are among workers. Lower is better.",
 )
-def balanced_schedule(schedule: Schedule) -> float:
+def balanced_schedule(schedule: Schedule) -> tuple[float, dict[int, float]]:
     """Score the schedule based on how balanced the shifts are among workers. Lower is better."""
     shift_codes = [shift_type.code for shift_type in ShiftWorkType]
     WEIGHTS: dict[int, float] = {
@@ -34,24 +35,26 @@ def balanced_schedule(schedule: Schedule) -> float:
     for stc in shift_codes:
         total = sum(counts[worker_id][stc] for worker_id in counts)
         average[stc] = total / len(counts) if counts else 0.0
-    
-    # Calculate the imbalance score as the sum of absolute deviations from the average
+
+    # Calculate per-worker imbalance score and total score.
     imbalance_score = 0.0
+    per_worker_scores: dict[int, float] = {}
     for worker_id in counts:
         worker_score = 0.0
         for stc in shift_codes:
             worker_score += WEIGHTS[stc] * abs(counts[worker_id][stc] - average[stc])
 
+        per_worker_scores[worker_id] = worker_score
         imbalance_score += worker_score
-    
-    return imbalance_score
 
+    return imbalance_score, per_worker_scores
 
+@soft_constraint
 @constraint_meta(
     "Shift Continuation",
     "Score the schedule based on the number of shift changes in consecutive days for each worker. Lower is better.",
 )
-def shift_continuation(schedule: Schedule) -> float:
+def shift_continuation(schedule: Schedule) -> tuple[float, dict[int, float]]:
     """Score the schedule based on number of shift changes in consecutive days for each worker. Lower is better."""
     shift_codes = [stc.code for sub in ShiftType.__subclasses__() for stc in sub]
     WEIGHTS_FROM_TO: dict[tuple[int, int], float] = {
@@ -78,14 +81,16 @@ def shift_continuation(schedule: Schedule) -> float:
         worker_scores[worker_id] = worker_score
 
     shift_continuation_score = sum(worker_scores.values())
-    return shift_continuation_score
+    return shift_continuation_score, worker_scores
 
-
+@soft_constraint
 @constraint_meta(
     "Preferred Schedule",
     "Score the schedule based on how well it matches the preferred schedule. Lower is better.",
 )
-def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
+def preferred_schedule(
+    schedule: Schedule, preferences: Schedule
+) -> tuple[float, dict[int, float]]:
     """Score the schedule based on how well it matches the preferred schedule. Lower is better."""
     WRONG_SHIFT_PENALTY = 1.0
 
@@ -109,6 +114,7 @@ def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
             )
 
     total_score = 0.0
+    per_worker_scores: dict[int, float] = {}
     for worker_id, preferred_shifts in preferences.shifts_by_worker.items():
         worker_score = 0.0
         for p_shift in preferred_shifts:
@@ -118,16 +124,17 @@ def preferred_schedule(schedule: Schedule, preferences: Schedule) -> float:
                 continue
             if actual_shift.shift_type != p_shift.shift_type:
                 worker_score += WRONG_SHIFT_PENALTY
+        per_worker_scores[worker_id] = worker_score
         total_score += worker_score
 
-    return total_score
+    return total_score, per_worker_scores
 
-
+@soft_constraint
 @constraint_meta(
     "Monthly Weekend",
     "Score the schedule based on the number of weekends each worker has off. Lower is better.",
 )
-def monthly_weekend(schedule: Schedule) -> float:
+def monthly_weekend(schedule: Schedule) -> tuple[float, dict[int, float]]:
     """Score the schedule based on the number of weekends each worker has off. Lower is better."""
     WORKING_WEEKEND_PENALTY = 1.0
 
@@ -218,6 +225,7 @@ def monthly_weekend(schedule: Schedule) -> float:
         )
 
     total_score = 0.0
+    per_worker_scores: dict[int, float] = {}
     for worker_id, shifts in schedule.shifts_by_worker.items():
         worker_score = 0.0
         # Group shifts by month
@@ -241,6 +249,7 @@ def monthly_weekend(schedule: Schedule) -> float:
                 elif ww.unknown():
                     issue_warning(worker_id, ww)
 
+            per_worker_scores[worker_id] = worker_score
             total_score += worker_score
 
-    return total_score
+    return total_score, per_worker_scores

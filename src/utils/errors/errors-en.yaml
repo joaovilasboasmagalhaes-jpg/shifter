@@ -10,6 +10,11 @@ system_errors:
   unsupported_file_type: "Unsupported file type: {file_type}."
   break_constraint_required: "Constraint '{fn.__name__}' must define a local 'break_constraint' method"
   hard_constraint_after_meta: "@hard_constraint must be applied after @constraint_meta."
+  schedule_or_workers_required: "Must provide either a schedule or a list of workers to build the constraint display."
+  soft_constraint_after_meta: "@soft_constraint must be applied after @constraint_meta."
+  soft_constraint_return_tuple_required: "Soft constraint '{fn.__name__}' must return a tuple: (score, per_worker_score)."
+  soft_constraint_score_number_required: "Soft constraint '{fn.__name__}' must return a numeric score as the first tuple value."
+  soft_constraint_per_worker_score_dict_required: "Soft constraint '{fn.__name__}' must return a dict as the second tuple value (per_worker_score)."
   title_and_description_required: "Both title and description are required for a constraint."
 
 constraints:

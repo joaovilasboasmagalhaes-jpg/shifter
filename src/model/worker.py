@@ -35,3 +35,7 @@ class Worker:
 
     def __str__(self) -> str:
         return self.to_string()
+
+    def __hash__(self) -> int:
+        """Hash by the same fields used for dataclass equality."""
+        return hash((self.name, self.id))

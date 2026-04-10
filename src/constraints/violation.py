@@ -27,6 +27,49 @@ class Constraint:
 
 _CONSTRAINT_DISPLAY_NAMES: dict[str, str] = {}
 
+def soft_constraint(obj):
+    """Decorator for soft constraints. Requires a Constraint object from @constraint_meta.
+    Sets is_hard=False and enforces the function to return a tuple of (score, per_worker_scores).
+    Usage::
+        @soft_constraint
+        @constraint_meta("Title", "Description")
+        def ...
+    """
+    if not isinstance(obj, Constraint):
+        raise ValueError(Error.get_message("system_errors.soft_constraint_after_meta"))
+
+    fn = obj.func
+
+    def wrapped(*args, **kwargs):
+        result = fn(*args, **kwargs)
+        if not isinstance(result, tuple) or len(result) != 2:
+            raise ValueError(
+                Error.get_message(
+                    "system_errors.soft_constraint_return_tuple_required", fn=fn
+                )
+            )
+
+        score, per_worker_score = result
+        if not isinstance(score, (int, float)):
+            raise ValueError(
+                Error.get_message(
+                    "system_errors.soft_constraint_score_number_required", fn=fn
+                )
+            )
+        if not isinstance(per_worker_score, dict):
+            raise ValueError(
+                Error.get_message(
+                    "system_errors.soft_constraint_per_worker_score_dict_required",
+                    fn=fn,
+                )
+            )
+        return float(score), per_worker_score
+
+    obj.func = wrapped
+    obj.is_hard = False
+    _CONSTRAINT_DISPLAY_NAMES[obj.__name__] = obj.title
+    return obj
+
 
 def hard_constraint(obj):
     """Decorator for hard constraints. Requires a Constraint object from @constraint_meta.

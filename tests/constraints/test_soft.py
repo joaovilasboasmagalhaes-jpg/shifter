@@ -22,14 +22,15 @@ def test_balanced_schedule_real_objects():
     sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 1), w2))
     sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 2), w2))
     sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 3), w2))
-    result = balanced_schedule(sched)
-    assert isinstance(result, float)
+    score, per_worker_scores = balanced_schedule(sched)
+    assert isinstance(score, float)
+    assert isinstance(per_worker_scores, dict)
     # Alice: [1,1,1], Bob: [2,0,1] (M,A,N)
     # Averages: M=1.5, A=0.5, N=1.0
     # Alice: |1-1.5|+|1-0.5|+|1-1| = 0.5+0.5+0 = 1.0
     # Bob:   |2-1.5|+|0-0.5|+|1-1| = 0.5+0.5+0 = 1.0
     # Total = 2.0
-    assert abs(result - 2.0) < 1e-6
+    assert abs(score - 2.0) < 1e-6
 
 def test_balanced_schedule_perfect_balance():
     Worker.reset_ids()
@@ -40,8 +41,8 @@ def test_balanced_schedule_perfect_balance():
     for st, d in zip([ShiftWorkType.MORNING, ShiftWorkType.AFTERNOON, ShiftWorkType.NIGHT], [1,2,3]):
         sched.add_shift(Shift(st, date(2024, 1, d), w1))
         sched.add_shift(Shift(st, date(2024, 1, d), w2))
-    result = balanced_schedule(sched)
-    assert abs(result) < 1e-6
+    score, _ = balanced_schedule(sched)
+    assert abs(score) < 1e-6
 
 def test_balanced_schedule_single_worker():
     Worker.reset_ids()
@@ -50,15 +51,15 @@ def test_balanced_schedule_single_worker():
     sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 1), w1))
     sched.add_shift(Shift(ShiftWorkType.AFTERNOON, date(2024, 1, 2), w1))
     sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 3), w1))
-    result = balanced_schedule(sched)
-    assert abs(result) < 1e-6
+    score, _ = balanced_schedule(sched)
+    assert abs(score) < 1e-6
 
 def test_balanced_schedule_no_shifts():
     Worker.reset_ids()
     sched = Schedule(start_date=date(2024, 1, 1), end_date=date(2024, 1, 3))
     # No shifts assigned
-    result = balanced_schedule(sched)
-    assert abs(result) < 1e-6
+    score, _ = balanced_schedule(sched)
+    assert abs(score) < 1e-6
 
 
 # --- shift_continuation tests ---
@@ -70,8 +71,10 @@ def test_shift_continuation_no_changes():
     sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 1), w))
     sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 2), w))
     sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 3), w))
-    result = shift_continuation(sched)
-    assert abs(result) < 1e-6
+    score, per_worker_scores = shift_continuation(sched)
+    assert isinstance(score, float)
+    assert isinstance(per_worker_scores, dict)
+    assert abs(score) < 1e-6
 
 
 def test_shift_continuation_with_changes():
@@ -83,8 +86,9 @@ def test_shift_continuation_with_changes():
     sched.add_shift(Shift(ShiftWorkType.AFTERNOON, date(2024, 1, 2), w))
     sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 3), w))
     # Penalties: M->A (1.0), A->N (night, 1.0)
-    result = shift_continuation(sched)
-    assert abs(result - 2.0) < 1e-6
+    score, per_worker_scores = shift_continuation(sched)
+    assert isinstance(per_worker_scores, dict)
+    assert abs(score - 2.0) < 1e-6
 
 
 def test_shift_continuation_night_involved():
@@ -96,8 +100,9 @@ def test_shift_continuation_night_involved():
     sched.add_shift(Shift(ShiftWorkType.MORNING, date(2024, 1, 2), w))
     sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 3), w))
     # Penalties: N->M (night, 1.0), M->N (night, 1.0)
-    result = shift_continuation(sched)
-    assert abs(result - 2.0) < 1e-6
+    score, per_worker_scores = shift_continuation(sched)
+    assert isinstance(per_worker_scores, dict)
+    assert abs(score - 2.0) < 1e-6
 
 
 def test_shift_continuation_multiple_workers():
@@ -113,9 +118,10 @@ def test_shift_continuation_multiple_workers():
     sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 1), w2))
     sched.add_shift(Shift(ShiftWorkType.NIGHT, date(2024, 1, 2), w2))
     sched.add_shift(Shift(ShiftWorkType.AFTERNOON, date(2024, 1, 3), w2))
-    result = shift_continuation(sched)
+    score, per_worker_scores = shift_continuation(sched)
+    assert isinstance(per_worker_scores, dict)
     # w1: M->A (1.0), A->N (night, 1.0) = 2.0; w2: N->N (0), N->A (night, 1.0) = 1.0; total = 3.0
-    assert abs(result - 3.0) < 1e-6
+    assert abs(score - 3.0) < 1e-6
 
 
 def test_shift_continuation_single_worker_no_shifts():
@@ -123,8 +129,9 @@ def test_shift_continuation_single_worker_no_shifts():
     w = Worker("Solo")
     sched = Schedule(start_date=date(2024, 1, 1), end_date=date(2024, 1, 3))
     # No shifts assigned
-    result = shift_continuation(sched)
-    assert abs(result) < 1e-6
+    score, per_worker_scores = shift_continuation(sched)
+    assert isinstance(per_worker_scores, dict)
+    assert abs(score) < 1e-6
 
 
 # --- monthly_weekend tests ---
@@ -142,9 +149,10 @@ def test_monthly_weekend_penalizes_all_working_weekends_in_month():
     for d in worked_days:
         sched.add_shift(Shift(shift_type=ShiftWorkType.MORNING, date=d, worker=worker))
 
-    result = monthly_weekend(sched)
-    assert isinstance(result, float)
-    assert abs(result - 4.0) < 1e-6
+    score, per_worker_scores = monthly_weekend(sched)
+    assert isinstance(score, float)
+    assert isinstance(per_worker_scores, dict)
+    assert abs(score - 4.0) < 1e-6
 
 
 def test_monthly_weekend_scores_only_working_weekends():
@@ -155,8 +163,9 @@ def test_monthly_weekend_scores_only_working_weekends():
     for d in [date(2026, 3, 7), date(2026, 3, 14), date(2026, 3, 21)]:
         sched.add_shift(Shift(shift_type=ShiftWorkType.MORNING, date=d, worker=worker))
 
-    result = monthly_weekend(sched)
-    assert abs(result - 3.0) < 1e-6
+    score, per_worker_scores = monthly_weekend(sched)
+    assert isinstance(per_worker_scores, dict)
+    assert abs(score - 3.0) < 1e-6
 
 
 def test_monthly_weekend_break_shift_does_not_count_as_working():
@@ -169,8 +178,9 @@ def test_monthly_weekend_break_shift_does_not_count_as_working():
         Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 28), worker=worker)
     )
 
-    result = monthly_weekend(sched)
-    assert abs(result - 3.0) < 1e-6
+    score, per_worker_scores = monthly_weekend(sched)
+    assert isinstance(per_worker_scores, dict)
+    assert abs(score - 3.0) < 1e-6
 
 
 def test_monthly_weekend_two_break_days_make_weekend_off():
@@ -186,8 +196,9 @@ def test_monthly_weekend_two_break_days_make_weekend_off():
         Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 29), worker=worker)
     )
 
-    result = monthly_weekend(sched)
-    assert abs(result - 3.0) < 1e-6
+    score, per_worker_scores = monthly_weekend(sched)
+    assert isinstance(per_worker_scores, dict)
+    assert abs(score - 3.0) < 1e-6
 
 
 def test_monthly_weekend_mixed_work_and_break_weekend_counts_as_working():
@@ -219,5 +230,6 @@ def test_monthly_weekend_mixed_work_and_break_weekend_counts_as_working():
         Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 29), worker=worker)
     )
 
-    result = monthly_weekend(sched)
-    assert abs(result - 4.0) < 1e-6
+    score, per_worker_scores = monthly_weekend(sched)
+    assert isinstance(per_worker_scores, dict)
+    assert abs(score - 4.0) < 1e-6
