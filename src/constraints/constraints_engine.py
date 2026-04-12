@@ -144,8 +144,10 @@ def _run_soft_constraints(
     return soft_constraints
 
 
-def evaluate(schedule: Schedule, preferences: Optional[Schedule] = None) -> None:
+def evaluate(
+    schedule: Schedule, preferences: Optional[Schedule] = None
+) -> tuple[dict[str, HardConstraintDisplay], dict[str, SoftConstraintDisplay]]:
     hard_constraints = _run_hard_constraints(schedule)
     soft_constraints = _run_soft_constraints(schedule, preferences)
     collector.clear()
-    return
+    return hard_constraints, soft_constraints
