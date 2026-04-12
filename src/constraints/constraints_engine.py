@@ -1,4 +1,3 @@
-from dataclasses import field
 from typing import Optional
 
 from src.constraints.hard import five_consecutive_shifts, rest_gap
@@ -17,7 +16,7 @@ from src.utils.errors.error_handler import ErrorHandler as Error
 class ConstraintDisplay:
     title: str
     description: str
-    workers: list[Worker] = field(default_factory=list)
+    workers: list[Worker] = []
     violations: list[ConstraintViolation]
 
     def __init__(
@@ -70,14 +69,14 @@ class HardConstraintDisplay(ConstraintDisplay):
 
 class SoftConstraintDisplay(ConstraintDisplay):
     score: float = 0.0
-    per_worker_scores: dict[int, float] = field(default_factory=dict)
+    per_worker_scores: dict[int, float] = {}
 
     def __init__(
         self,
         title: str,
         description: str,
         score: float = 0.0,
-        per_worker_scores: dict[int, float] = field(default_factory=dict),
+        per_worker_scores: dict[int, float] = {},
         violations: Optional[list[ConstraintViolation]] = None,
         schedule: Optional[Schedule] = None,
         workers: Optional[list[Worker]] = None,
