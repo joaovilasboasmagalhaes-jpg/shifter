@@ -249,7 +249,7 @@ def monthly_weekend(schedule: Schedule) -> tuple[float, dict[int, float]]:
                 elif ww.unknown():
                     issue_warning(worker_id, ww)
 
-            per_worker_scores[worker_id] = worker_score
-            total_score += worker_score
+        per_worker_scores[worker_id] = worker_score
+        total_score += worker_score
 
     return total_score, per_worker_scores
