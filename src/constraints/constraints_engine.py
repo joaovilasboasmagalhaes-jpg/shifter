@@ -99,6 +99,16 @@ class SoftConstraintDisplay(ConstraintDisplay):
 
 
 def _run_hard_constraints(schedule: Schedule) -> dict[str, HardConstraintDisplay]:
+    """Run all hard constraints and return their results.
+
+    Arguments:
+        schedule: The Schedule to evaluate.
+
+    Returns:
+        A dictionary mapping constraint titles to their display objects,
+        which include whether they are broken and any violations.
+    """
+
     hard_constraints: dict[str, HardConstraintDisplay] = {}
 
     def run_constraint(constraint_fn: Constraint, schedule: Schedule, **kwargs):
@@ -119,8 +129,18 @@ def _run_hard_constraints(schedule: Schedule) -> dict[str, HardConstraintDisplay
 
 
 def _run_soft_constraints(
-    schedule: Schedule, preferences: Optional[Schedule] = None
+    schedule: Schedule, **kwargs
 ) -> dict[str, SoftConstraintDisplay]:
+    """Run all soft constraints and return their scores and violations.
+
+    Arguments:
+        schedule: The Schedule to evaluate.
+        preferences: Optional Schedule containing worker preferences for shifts.
+
+    Returns:
+        A dictionary mapping constraint titles to their display objects,
+        which include scores and violations.
+    """
     soft_constraints: dict[str, SoftConstraintDisplay] = {}
 
     def run_constraint(constraint_fn: Constraint, schedule: Schedule, **kwargs):
@@ -137,17 +157,30 @@ def _run_soft_constraints(
 
     run_constraint(balanced_schedule, schedule=schedule)
     run_constraint(shift_continuation, schedule=schedule)
-    if preferences is not None:
-        run_constraint(preferred_schedule, schedule=schedule, preferences=preferences)
+    if "preferences" in kwargs and kwargs["preferences"] is not None:
+        run_constraint(
+            preferred_schedule, schedule=schedule, preferences=kwargs["preferences"]
+        )
     run_constraint(monthly_weekend, schedule=schedule)
 
     return soft_constraints
 
 
 def evaluate(
-    schedule: Schedule, preferences: Optional[Schedule] = None
+    schedule: Schedule, **kwargs
 ) -> tuple[dict[str, HardConstraintDisplay], dict[str, SoftConstraintDisplay]]:
-    hard_constraints = _run_hard_constraints(schedule)
-    soft_constraints = _run_soft_constraints(schedule, preferences)
+    """Evaluate the given schedule against all constraints and return their results.
+
+    Arguments:
+        schedule: The Schedule to evaluate.
+        preferences: Optional Schedule containing worker preferences for shifts.
+
+    Returns:
+        A tuple containing two dictionaries:
+        - The first dictionary maps hard constraint titles to their display objects.
+        - The second dictionary maps soft constraint titles to their display objects.
+    """
+    hard_constraints = _run_hard_constraints(schedule, **kwargs)
+    soft_constraints = _run_soft_constraints(schedule, **kwargs)
     collector.clear()
     return hard_constraints, soft_constraints
