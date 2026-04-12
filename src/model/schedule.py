@@ -53,6 +53,14 @@ class Schedule:
             if shift.date == d
         ]
 
+    def get_workers(self) -> list[Worker]:
+        """Return a list of all Worker objects assigned to shifts in this schedule."""
+        workers = set()
+        for worker_shifts in self.shifts_by_worker.values():
+            for shift in worker_shifts:
+                workers.add(shift.worker)
+        return list(workers)
+
     def get_worker(self, worker_id: int) -> Worker | None:
         """Return the Worker object for a given worker id, or None if not found."""
         worker_shifts = self.shifts_by_worker.get(worker_id)

@@ -1,13 +1,18 @@
 from src.constraints.violation import ConstraintSeverity as Severity
-from src.constraints.violation import collector, constraint
+from src.constraints.violation import collector, constraint_meta, hard_constraint
 from src.model.schedule import Schedule
 from src.model.shift import Shift
+from src.utils.date_utils import next_day
 from src.utils.errors.error_handler import ErrorHandler as Error
 
 
-@constraint("Five Consecutive Shifts")
+@hard_constraint
+@constraint_meta(
+    "Five Consecutive Shifts",
+    "Ensure that no worker has more than 5 consecutive shifts in a row. Violations are severe and will be reported as errors.",
+)
 def five_consecutive_shifts(schedule: Schedule) -> bool:
-    """Ensure that no worker has more than 5 consecutive shifts.
+    """Ensure that no worker has more than 5 consecutive shifts in a row.
     Returns True if any worker has more than 5 consecutive shifts, else False."""
     constraint_broken = False
 
@@ -25,6 +30,7 @@ def five_consecutive_shifts(schedule: Schedule) -> bool:
             ),
             worker_id=worker_id,
             details={"consecutive_shifts": [s.__repr__() for s in shifts]},
+            constraint=five_consecutive_shifts,
         )
         constraint_broken = True
 
@@ -34,7 +40,13 @@ def five_consecutive_shifts(schedule: Schedule) -> bool:
         consecutive_count = 1
 
         for i in range(1, len(sorted_shifts)):
-            if (sorted_shifts[i].date - sorted_shifts[i - 1].date).days == 1:
+            shift = sorted_shifts[i]
+            prev_shift = sorted_shifts[i - 1]
+            if (
+                shift.is_work_shift()
+                and prev_shift.is_work_shift()
+                and shift.date == next_day(prev_shift.date)
+            ):
                 consecutive_count += 1
                 if consecutive_count > 5:
                     break_constraint(worker_id, sorted_shifts[i - 5 : i + 1])
@@ -44,7 +56,12 @@ def five_consecutive_shifts(schedule: Schedule) -> bool:
     return constraint_broken
 
 
-@constraint("Rest Gap")
+@hard_constraint
+@constraint_meta(
+    "Rest Gap",
+    "Ensure that there is at least 11 hours of rest between shifts for each worker. "
+    "Violations are severe and will be reported as errors.",
+)
 def rest_gap(schedule: Schedule) -> bool:
     """Ensure that there is at least 11 hours of rest between shifts for each worker.
     Returns True if any worker has less than 11 hours between shifts, else False."""
@@ -71,6 +88,7 @@ def rest_gap(schedule: Schedule) -> bool:
                 "current_shift": curr_shift.__repr__(),
                 "hours_between": hours_between,
             },
+            constraint=rest_gap,
         )
         constraint_broken = True
 

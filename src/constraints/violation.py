@@ -1,40 +1,113 @@
-import inspect
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
-from typing import TypeVar, cast
+from typing import TypeVar
 
 from src.utils.errors.error_handler import ErrorHandler as Error
 
 _F = TypeVar("_F", bound=Callable)
+
+
+class Constraint:
+    """Wrapper for constraint functions, holding metadata and the function itself."""
+
+    def __init__(
+        self, func: Callable, title: str, description: str, is_hard: bool = False
+    ):
+        self.func = func
+        self.title = title
+        self.description = description
+        self.is_hard = is_hard
+        self.__name__ = func.__name__
+        self.__doc__ = func.__doc__
+
+    def __call__(self, *args, **kwargs):
+        return self.func(*args, **kwargs)
+
 _CONSTRAINT_DISPLAY_NAMES: dict[str, str] = {}
 
-
-def constraint(name: str) -> Callable[[_F], _F]:
-    """Decorator that attaches a `constraint_name` attribute to a constraint function.
-
+def soft_constraint(obj):
+    """Decorator for soft constraints. Requires a Constraint object from @constraint_meta.
+    Sets is_hard=False and enforces the function to return a tuple of (score, per_worker_scores).
     Usage::
-
-        @constraint("five_consecutive_shifts")
-        def five_consecutive_shifts(schedule): ...
-
-        collector.add(five_consecutive_shifts.constraint_name, ...)
+        @soft_constraint
+        @constraint_meta("Title", "Description")
+        def ...
     """
-    def decorator(fn: _F) -> _F:
-        if "break_constraint" not in fn.__code__.co_varnames:
+    if not isinstance(obj, Constraint):
+        raise ValueError(Error.get_message("system_errors.soft_constraint_after_meta"))
+
+    fn = obj.func
+
+    def wrapped(*args, **kwargs):
+        result = fn(*args, **kwargs)
+        if not isinstance(result, tuple) or len(result) != 2:
             raise ValueError(
-                Error.get_message("system_errors.break_constraint_required", fn=fn)
+                Error.get_message(
+                    "system_errors.soft_constraint_return_tuple_required", fn=fn
+                )
             )
-        _CONSTRAINT_DISPLAY_NAMES[fn.__name__] = name
-        fn.constraint_name = name  # type: ignore[attr-defined]
-        return fn
+
+        score, per_worker_score = result
+        if not isinstance(score, (int, float)):
+            raise ValueError(
+                Error.get_message(
+                    "system_errors.soft_constraint_score_number_required", fn=fn
+                )
+            )
+        if not isinstance(per_worker_score, dict):
+            raise ValueError(
+                Error.get_message(
+                    "system_errors.soft_constraint_per_worker_score_dict_required",
+                    fn=fn,
+                )
+            )
+        return float(score), per_worker_score
+
+    obj.func = wrapped
+    obj.is_hard = False
+    _CONSTRAINT_DISPLAY_NAMES[obj.__name__] = obj.title
+    return obj
+
+
+def hard_constraint(obj):
+    """Decorator for hard constraints. Requires a Constraint object from @constraint_meta.
+    Sets is_hard=True and enforces 'break_constraint' presence in the function signature.
+    Usage::
+        @hard_constraint
+        @constraint_meta("Title", "Description")
+        def ...
+    """
+    if not isinstance(obj, Constraint):
+        raise ValueError(Error.get_message("system_errors.hard_constraint_after_meta"))
+    fn = obj.func
+    if "break_constraint" not in fn.__code__.co_varnames:
+        raise ValueError(
+            Error.get_message("system_errors.break_constraint_required", fn=fn)
+        )
+    obj.is_hard = True
+    _CONSTRAINT_DISPLAY_NAMES[obj.__name__] = obj.title
+    return obj
+
+
+def constraint_meta(title: str, description: str) -> Callable[[Callable], Constraint]:
+    """Decorator for all constraints. Wraps the function in a Constraint object with metadata."""
+
+    def decorator(fn: Callable) -> Constraint:
+        if not title or not description:
+            raise ValueError(
+                Error.get_message("system_errors.title_and_description_required")
+            )
+        return Constraint(fn, title, description)
     return decorator
 
 
-def get_constraint_name(fn: Callable[..., object]) -> str:
-    """Return a constraint display name attached by `@constraint`, or fallback to function name."""
-    return cast(str, getattr(fn, "constraint_name", fn.__name__))
+def get_constraint_name(obj: object) -> str:
+    """Return a constraint display name from a Constraint object, or fallback to function name."""
+    if isinstance(obj, Constraint):
+        return obj.title
+    return getattr(obj, "__name__", str(obj))
 
 
 class ConstraintSeverity(Enum):
@@ -79,6 +152,11 @@ class ViolationCollector:
     def __init__(self) -> None:
         self.violations: list[ConstraintViolation] = []
 
+    def get_violations(self, constraint: object) -> list[ConstraintViolation]:
+        """Return all violations associated with a given constraint."""
+        constraint_name = get_constraint_name(constraint)
+        return [v for v in self.violations if v.constraint_name == constraint_name]
+
     def add(
         self,
         constraint_name: str,
@@ -104,18 +182,17 @@ class ViolationCollector:
         message: str,
         worker_id: int | None = None,
         details: dict | None = None,
+        constraint: object = None,
     ) -> ConstraintViolation:
         """Record a violation for the calling constraint function.
 
         This is intended to be called from inside a `@constraint` function,
         so callers don't have to pass the constraint name explicitly.
         """
-        frame = inspect.currentframe()
         constraint_name = "unknown_constraint"
-        while frame := frame.f_back if frame else None:
-            if frame.f_code.co_name in _CONSTRAINT_DISPLAY_NAMES:
-                constraint_name = _CONSTRAINT_DISPLAY_NAMES[frame.f_code.co_name]
-                break
+        if constraint is not None and isinstance(constraint, Constraint):
+            constraint_name = constraint.title
+
         return self.add(
             constraint_name=constraint_name,
             severity=severity,

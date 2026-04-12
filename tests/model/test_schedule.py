@@ -62,3 +62,24 @@ def test_shifts_for_worker_returns_empty_list_when_worker_has_no_shifts():
     sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
 
     assert sched.shifts_for_worker(9999) == []
+
+
+def test_get_workers_returns_unique_workers_with_assigned_shifts():
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+    w1 = Worker(name="Fiona")
+    w2 = Worker(name="Gabe")
+    s1 = Shift(shift_type=ShiftWorkType.MORNING, date=date(2026, 3, 10), worker=w1)
+    s2 = Shift(shift_type=ShiftWorkType.NIGHT, date=date(2026, 3, 11), worker=w1)
+    s3 = Shift(shift_type=ShiftBreakType.DAY_OFF, date=date(2026, 3, 12), worker=w2)
+
+    sched.add_shift(s1)
+    sched.add_shift(s2)
+    sched.add_shift(s3)
+
+    assert set(sched.get_workers()) == {w1, w2}
+
+
+def test_get_workers_returns_empty_list_when_no_shifts_exist():
+    sched = Schedule(start_date=date(2026, 3, 1), end_date=date(2026, 3, 31))
+
+    assert sched.get_workers() == []

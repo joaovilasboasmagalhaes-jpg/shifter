@@ -2,12 +2,12 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug loader_cli (feb.xlsx)",
+      "name": "Debug loader_cli (apr.xlsx)",
       "type": "debugpy",
       "request": "launch",
       "module": "src.loader_cli",
       "args": [
-        "./feb.xlsx",
+        "./apr.xlsx",
         "./config.json"
       ],
       "cwd": "${workspaceFolder}",
