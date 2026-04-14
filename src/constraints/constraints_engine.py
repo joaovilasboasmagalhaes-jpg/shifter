@@ -47,7 +47,7 @@ class ConstraintDisplay:
             )
 
 
-class HardConstraintDisplay(ConstraintDisplay):
+class HardConstraintResult(ConstraintDisplay):
     broken: bool = False
 
     def __init__(
@@ -67,7 +67,7 @@ class HardConstraintDisplay(ConstraintDisplay):
         return f"{self.title}: {status}"
 
 
-class SoftConstraintDisplay(ConstraintDisplay):
+class SoftConstraintResult(ConstraintDisplay):
     score: float = 0.0
     per_worker_scores: dict[int, float] = {}
 
@@ -98,7 +98,7 @@ class SoftConstraintDisplay(ConstraintDisplay):
         return f"{self.title}: Score={self.score:.2f}"
 
 
-def _run_hard_constraints(schedule: Schedule) -> dict[str, HardConstraintDisplay]:
+def _run_hard_constraints(schedule: Schedule) -> dict[str, HardConstraintResult]:
     """Run all hard constraints and return their results.
 
     Arguments:
@@ -109,12 +109,12 @@ def _run_hard_constraints(schedule: Schedule) -> dict[str, HardConstraintDisplay
         which include whether they are broken and any violations.
     """
 
-    hard_constraints: dict[str, HardConstraintDisplay] = {}
+    hard_constraints: dict[str, HardConstraintResult] = {}
 
     def run_constraint(constraint_fn: Constraint, schedule: Schedule, **kwargs):
         """Helper function to run a hard constraint and record its result."""
         broken = constraint_fn(schedule, **kwargs)
-        hard_constraints[constraint_fn.title] = HardConstraintDisplay(
+        hard_constraints[constraint_fn.title] = HardConstraintResult(
             title=constraint_fn.title,
             description=constraint_fn.description,
             broken=broken,
@@ -130,7 +130,7 @@ def _run_hard_constraints(schedule: Schedule) -> dict[str, HardConstraintDisplay
 
 def _run_soft_constraints(
     schedule: Schedule, **kwargs
-) -> dict[str, SoftConstraintDisplay]:
+) -> dict[str, SoftConstraintResult]:
     """Run all soft constraints and return their scores and violations.
 
     Arguments:
@@ -141,12 +141,12 @@ def _run_soft_constraints(
         A dictionary mapping constraint titles to their display objects,
         which include scores and violations.
     """
-    soft_constraints: dict[str, SoftConstraintDisplay] = {}
+    soft_constraints: dict[str, SoftConstraintResult] = {}
 
     def run_constraint(constraint_fn: Constraint, schedule: Schedule, **kwargs):
         """Helper function to run a soft constraint and record its result."""
         score, per_worker_scores = constraint_fn(schedule, **kwargs)
-        soft_constraints[constraint_fn.title] = SoftConstraintDisplay(
+        soft_constraints[constraint_fn.title] = SoftConstraintResult(
             title=constraint_fn.title,
             description=constraint_fn.description,
             score=score,
@@ -168,7 +168,7 @@ def _run_soft_constraints(
 
 def evaluate(
     schedule: Schedule, **kwargs
-) -> tuple[dict[str, HardConstraintDisplay], dict[str, SoftConstraintDisplay]]:
+) -> tuple[dict[str, HardConstraintResult], dict[str, SoftConstraintResult]]:
     """Evaluate the given schedule against all constraints and return their results.
 
     Arguments:
