@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import date
+from itertools import cycle
 
 from src.constraints.constraints_engine import (
     HardConstraintResult,
@@ -9,7 +10,10 @@ from src.constraints.constraints_engine import (
     evaluate,
 )
 from src.model.schedule import Schedule
+from src.model.shift import Shift
+from src.model.shift_type import ShiftWorkType
 from src.model.worker import Worker
+from src.utils.date_utils import next_day
 
 
 @dataclass(frozen=True)
@@ -278,11 +282,10 @@ class ScheduleGenerator:
     ) -> Schedule:
         """Construct the first schedule used to seed the generation cycle.
 
-        Intended future logic:
-            Build a baseline schedule covering the requested date range. This is
-            the right place for a simple constructive heuristic such as assigning
-            workers day by day or shift by shift before any repair or
-            optimization steps are applied.
+        Builds a simple round-robin assignment of workers to shifts across the date range,
+        without any regard for constraints. This provides a starting point that is
+        guaranteed to be complete, but likely invalid and with a high soft score, which
+        the generation cycles can then improve upon.
 
         Args:
             workers: Workers available for assignment.
@@ -296,9 +299,18 @@ class ScheduleGenerator:
             NotImplementedError: The initial construction strategy is not yet
                 implemented.
         """
-        raise NotImplementedError(
-            "Initial schedule construction is not implemented yet."
-        )
+        schedule = Schedule(start_date=start_date, end_date=end_date)
+        worker_cycle = cycle(workers)
+        current_day = start_date
+        while current_day <= end_date:
+            for shift_type in ShiftWorkType:
+                shift = Shift(
+                    shift_type=shift_type, date=current_day, worker=next(worker_cycle)
+                )
+                schedule.add_shift(shift)
+            current_day = next_day(current_day)
+
+        return schedule
 
     def _build_candidate_schedule(
         self, workers: list[Worker], current_schedule: Schedule
