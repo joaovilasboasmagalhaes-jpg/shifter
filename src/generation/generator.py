@@ -294,10 +294,6 @@ class ScheduleGenerator:
 
         Returns:
             A schedule spanning the requested date range.
-
-        Raises:
-            NotImplementedError: The initial construction strategy is not yet
-                implemented.
         """
         schedule = Schedule(start_date=start_date, end_date=end_date)
         worker_cycle = cycle(workers)
@@ -333,7 +329,7 @@ class ScheduleGenerator:
         Raises:
             NotImplementedError: Candidate generation is not yet implemented.
         """
-        raise NotImplementedError("Candidate generation is not implemented yet.")
+        return current_schedule  # Placeholder: return the input schedule unchanged for now.
 
     def _repair_candidate_schedule(self, schedule: Schedule) -> Schedule:
         """Repair hard-constraint issues in a candidate schedule.
@@ -353,7 +349,7 @@ class ScheduleGenerator:
         Raises:
             NotImplementedError: Candidate repair is not yet implemented.
         """
-        raise NotImplementedError("Candidate repair is not implemented yet.")
+        return schedule  # Placeholder: return the input schedule unchanged for now.
 
     def _improve_candidate_schedule(self, schedule: Schedule) -> Schedule:
         """Improve a repaired schedule without breaking the generation contract.
@@ -372,7 +368,7 @@ class ScheduleGenerator:
         Raises:
             NotImplementedError: Candidate improvement is not yet implemented.
         """
-        raise NotImplementedError("Candidate improvement is not implemented yet.")
+        return schedule  # Placeholder: return the input schedule unchanged for now.
 
 
 def generate(workers: list[Worker], start_date: date, end_date: date) -> Schedule:
